@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arc Diagram Visualization</title>
+    <title>Interactive Arc Diagram</title>
     <style>
         body {
             margin: 0;
@@ -20,7 +20,7 @@
         }
         #canvas-container {
             width: 100%;
-            height: 90vh; /* Made taller */
+            height: 90vh;
             position: relative;
         }
         canvas {
@@ -33,16 +33,29 @@
             top: 20px;
             text-align: center;
             width: 100%;
-            font-size: 24px;
+            font-size: 20px;
             letter-spacing: 2px;
             opacity: 0.8;
             z-index: 10;
+            pointer-events: none;
+        }
+        .subtitle {
+            position: absolute;
+            top: 50px;
+            text-align: center;
+            width: 100%;
+            font-size: 12px;
+            color: #aaaaaa;
+            z-index: 10;
+            pointer-events: none;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
 
     <div class="title">DATA CONNECTIONS</div>
+    <div class="subtitle">TAP THE RAINBOW BAR TO HIGHLIGHT</div>
     <div id="canvas-container">
         <canvas id="arcCanvas"></canvas>
     </div>
@@ -52,10 +65,11 @@
         const ctx = canvas.getContext('2d');
 
         let width, height;
-        const nodesCount = 300; // More points
-        const arcsCount = 4000; // More lines
+        const nodesCount = 300; 
+        const arcsCount = 4000; 
         const arcs = [];
         const nodePositions = [];
+        let activeNode = null; 
 
         function resize() {
             width = canvas.parentElement.clientWidth;
@@ -68,20 +82,16 @@
         window.addEventListener('resize', resize);
 
         function initData() {
-            // Reset data
             arcs.length = 0;
             nodePositions.length = 0;
             
-            const baselineY = height - 20;
             const margin = 20;
             const drawableWidth = width - (margin * 2);
 
-            // Calculate bottom points
             for (let i = 0; i < nodesCount; i++) {
                 nodePositions.push(margin + (i / (nodesCount - 1)) * drawableWidth);
             }
 
-            // Calculate connections
             for (let i = 0; i < arcsCount; i++) {
                 const startIndex = Math.floor(Math.random() * nodesCount);
                 let endIndex = Math.floor(Math.random() * nodesCount);
@@ -95,52 +105,85 @@
                 }
             }
             
-            ctx.clearRect(0, 0, width, height);
-            
-            // Draw the solid bottom rainbow bar
-            for (let i = 0; i < nodesCount; i++) {
-                const hue = (i / nodesCount) * 360;
-                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                ctx.fillRect(nodePositions[i] - 1, baselineY, 2, 20);
-            }
-
-            // Start the drawing animation
-            drawAnimation(0, baselineY);
+            drawInstantly();
         }
 
-        function drawAnimation(index, baselineY) {
-            // Draw 20 lines per frame so it animates smoothly
-            for (let j = 0; j < 20; j++) {
-                if (index >= arcs.length) return;
+        function drawInstantly() {
+            ctx.clearRect(0, 0, width, height);
+            const baselineY = height - 40;
 
-                const arc = arcs[index];
+            for (let i = 0; i < nodesCount; i++) {
+                const hue = (i / nodesCount) * 360;
+                
+                if (activeNode !== null && Math.abs(activeNode - i) > 5) {
+                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
+                } else {
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                }
+                
+                ctx.fillRect(nodePositions[i] - 1, baselineY, 2, 30);
+            }
+
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < arcs.length; i++) {
+                const arc = arcs[i];
                 const startX = nodePositions[arc.start];
                 const endX = nodePositions[arc.end];
                 const distance = Math.abs(startX - endX);
-                
-                // Calculate curve height based on distance
                 const controlY = baselineY - (distance * 0.9); 
-                
                 const hue = (arc.start / nodesCount) * 360;
                 
-                ctx.lineWidth = 0.5;
-                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.15)`; 
+                let opacity = 0.15; 
+                
+                if (activeNode !== null) {
+                    const isConnected = Math.abs(arc.start - activeNode) <= 5 || Math.abs(arc.end - activeNode) <= 5;
+                    if (isConnected) {
+                        opacity = 0.8; 
+                        ctx.lineWidth = 1.5;
+                    } else {
+                        opacity = 0.02; 
+                        ctx.lineWidth = 0.5;
+                    }
+                } else {
+                    ctx.lineWidth = 0.5;
+                }
 
+                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
                 ctx.beginPath();
                 ctx.moveTo(startX, baselineY);
                 ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
                 ctx.stroke();
-
-                index++;
             }
-            
-            // Tell the browser to keep drawing the next batch
-            requestAnimationFrame(() => drawAnimation(index, baselineY));
         }
 
-        // Start everything
+        function handleInteraction(event) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX;
+            
+            if (event.touches && event.touches.length > 0) {
+                clientX = event.touches[0].clientX;
+            } else {
+                clientX = event.clientX;
+            }
+            
+            const x = clientX - rect.left;
+            const margin = 20;
+            const drawableWidth = width - (margin * 2);
+            const percentage = (x - margin) / drawableWidth;
+            
+            if (percentage >= 0 && percentage <= 1) {
+                activeNode = Math.floor(percentage * nodesCount);
+            } else {
+                activeNode = null; 
+            }
+            
+            drawInstantly();
+        }
+
+        canvas.addEventListener('mousedown', handleInteraction);
+        canvas.addEventListener('touchstart', handleInteraction, {passive: true});
+
         resize();
     </script>
 </body>
 </html>
-
