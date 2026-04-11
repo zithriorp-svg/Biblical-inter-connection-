@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Arc Diagram</title>
+    <title>Command Center Arc Diagram</title>
     <style>
         body {
             margin: 0;
@@ -17,7 +17,7 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            touch-action: none; /* Prevents the screen from accidentally scrolling while dragging */
+            touch-action: none;
         }
         #canvas-container {
             width: 100%;
@@ -56,7 +56,7 @@
 
     <div class="header">
         <div class="title">DATA CONNECTIONS</div>
-        <div class="subtitle" id="statusText">DRAG FINGER ACROSS BOTTOM BAR</div>
+        <div class="subtitle" id="statusText">SYSTEM INITIALIZING...</div>
     </div>
     <div id="canvas-container">
         <canvas id="arcCanvas"></canvas>
@@ -72,7 +72,12 @@
         const arcsCount = 4000; 
         const arcs = [];
         const nodePositions = [];
+        
         let activeNode = null; 
+        let isInteracting = false;
+        let autoScanNode = 0;
+        let scanDirection = 1;
+        let idleTimer = null;
 
         function resize() {
             width = canvas.parentElement.clientWidth;
@@ -107,18 +112,31 @@
                     arcs.push({ start: startIndex, end: endIndex });
                 }
             }
-            
-            drawInstantly();
         }
 
-        function drawInstantly() {
+        function drawFrame() {
             ctx.clearRect(0, 0, width, height);
             const baselineY = height - 40;
 
+            // Determine which node is currently active (user control vs auto-pilot)
+            let renderNode = null;
+
+            if (isInteracting) {
+                renderNode = activeNode;
+            } else {
+                // Auto-pilot math
+                autoScanNode += scanDirection * 0.4; // Speed of the scan
+                if (autoScanNode >= nodesCount - 1 || autoScanNode <= 0) {
+                    scanDirection *= -1; // Reverse direction at the edges
+                }
+                renderNode = Math.floor(autoScanNode);
+            }
+
+            // Draw the bottom color bar
             for (let i = 0; i < nodesCount; i++) {
                 const hue = (i / nodesCount) * 360;
                 
-                if (activeNode !== null && Math.abs(activeNode - i) > 5) {
+                if (renderNode !== null && Math.abs(renderNode - i) > 5) {
                     ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.1)`;
                 } else {
                     ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
@@ -127,6 +145,7 @@
                 ctx.fillRect(nodePositions[i] - 1, baselineY, 2, 30);
             }
 
+            // Draw the connection lines
             ctx.lineWidth = 0.5;
             let connectionCount = 0;
 
@@ -140,8 +159,8 @@
                 
                 let opacity = 0.15; 
                 
-                if (activeNode !== null) {
-                    const isConnected = Math.abs(arc.start - activeNode) <= 5 || Math.abs(arc.end - activeNode) <= 5;
+                if (renderNode !== null) {
+                    const isConnected = Math.abs(arc.start - renderNode) <= 5 || Math.abs(arc.end - renderNode) <= 5;
                     if (isConnected) {
                         opacity = 0.9; 
                         ctx.lineWidth = 1.5;
@@ -150,8 +169,6 @@
                         opacity = 0.02; 
                         ctx.lineWidth = 0.5;
                     }
-                } else {
-                    ctx.lineWidth = 0.5;
                 }
 
                 ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
@@ -161,16 +178,25 @@
                 ctx.stroke();
             }
 
-            if (activeNode !== null) {
-                statusText.innerText = `SCANNING SECTOR ${activeNode} — FOUND ${connectionCount} CONNECTIONS`;
-                statusText.style.color = `hsl(${(activeNode / nodesCount) * 360}, 100%, 60%)`;
+            // Update the text at the top
+            if (isInteracting) {
+                if (renderNode !== null) {
+                    statusText.innerText = `MANUAL OVERRIDE: SECTOR ${renderNode} — ${connectionCount} CONNECTIONS`;
+                    statusText.style.color = `hsl(${(renderNode / nodesCount) * 360}, 100%, 60%)`;
+                }
             } else {
-                statusText.innerText = "DRAG FINGER ACROSS BOTTOM BAR";
-                statusText.style.color = "#00ffcc";
+                statusText.innerText = `AUTO-PILOT: SCANNING SECTOR ${renderNode} — ${connectionCount} CONNECTIONS`;
+                statusText.style.color = `hsl(${(renderNode / nodesCount) * 360}, 100%, 60%)`;
             }
+
+            // Tell the browser to draw the next frame immediately
+            requestAnimationFrame(drawFrame);
         }
 
         function handleInteraction(event) {
+            isInteracting = true;
+            clearTimeout(idleTimer); // Stop the timer from triggering auto-pilot
+
             const rect = canvas.getBoundingClientRect();
             let clientX;
             
@@ -190,15 +216,17 @@
             } else {
                 activeNode = null; 
             }
-            
-            drawInstantly();
         }
 
         function resetInteraction() {
-            activeNode = null;
-            drawInstantly();
+            // Wait 2.5 seconds after the user lets go, then resume auto-pilot
+            idleTimer = setTimeout(() => {
+                isInteracting = false;
+                autoScanNode = activeNode || 0; // Start auto-pilot from where they left off
+            }, 2500);
         }
 
+        // Set up the touch controls
         canvas.addEventListener('mousedown', handleInteraction);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
         canvas.addEventListener('mouseup', resetInteraction);
@@ -208,7 +236,9 @@
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
         canvas.addEventListener('touchend', resetInteraction);
 
+        // Start the application
         resize();
+        requestAnimationFrame(drawFrame); // This starts the infinite animation loop
     </script>
 </body>
 </html>
