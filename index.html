@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Command Center Arc Diagram</title>
+    <title>Command Center Interface</title>
     <style>
         body {
             margin: 0;
@@ -21,7 +21,7 @@
         }
         #canvas-container {
             width: 100%;
-            height: 90vh;
+            height: 100vh;
             position: relative;
         }
         canvas {
@@ -43,12 +43,26 @@
             opacity: 0.9;
             margin-bottom: 8px;
         }
-        .subtitle {
+        
+        /* New Telemetry HUD Styling */
+        .hud-box {
+            position: absolute;
+            bottom: 80px; 
+            left: 20px;
+            background-color: rgba(0, 20, 10, 0.7);
+            border: 1px solid #00ffcc;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
             font-size: 12px;
             color: #00ffcc;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-weight: bold;
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+        .hud-row {
+            margin-bottom: 4px;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -56,8 +70,15 @@
 
     <div class="header">
         <div class="title">DATA CONNECTIONS</div>
-        <div class="subtitle" id="statusText">SYSTEM INITIALIZING...</div>
     </div>
+    
+    <div class="hud-box" id="telemetryHud">
+        <div class="hud-row" id="hudStatus">STATUS: INITIALIZING...</div>
+        <div class="hud-row" id="hudSector">SECTOR: 000</div>
+        <div class="hud-row" id="hudLinks">LINKS:  000</div>
+        <div class="hud-row" id="hudDensity">DENSITY: 0.00%</div>
+    </div>
+
     <div id="canvas-container">
         <canvas id="arcCanvas"></canvas>
     </div>
@@ -65,7 +86,12 @@
     <script>
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
-        const statusText = document.getElementById('statusText');
+        
+        // HUD Elements
+        const hudStatus = document.getElementById('hudStatus');
+        const hudSector = document.getElementById('hudSector');
+        const hudLinks = document.getElementById('hudLinks');
+        const hudDensity = document.getElementById('hudDensity');
 
         let width, height;
         const nodesCount = 300; 
@@ -118,21 +144,18 @@
             ctx.clearRect(0, 0, width, height);
             const baselineY = height - 40;
 
-            // Determine which node is currently active (user control vs auto-pilot)
             let renderNode = null;
 
             if (isInteracting) {
                 renderNode = activeNode;
             } else {
-                // Auto-pilot math
-                autoScanNode += scanDirection * 0.4; // Speed of the scan
+                autoScanNode += scanDirection * 0.4; 
                 if (autoScanNode >= nodesCount - 1 || autoScanNode <= 0) {
-                    scanDirection *= -1; // Reverse direction at the edges
+                    scanDirection *= -1; 
                 }
                 renderNode = Math.floor(autoScanNode);
             }
 
-            // Draw the bottom color bar
             for (let i = 0; i < nodesCount; i++) {
                 const hue = (i / nodesCount) * 360;
                 
@@ -145,7 +168,6 @@
                 ctx.fillRect(nodePositions[i] - 1, baselineY, 2, 30);
             }
 
-            // Draw the connection lines
             ctx.lineWidth = 0.5;
             let connectionCount = 0;
 
@@ -178,24 +200,32 @@
                 ctx.stroke();
             }
 
-            // Update the text at the top
-            if (isInteracting) {
-                if (renderNode !== null) {
-                    statusText.innerText = `MANUAL OVERRIDE: SECTOR ${renderNode} — ${connectionCount} CONNECTIONS`;
-                    statusText.style.color = `hsl(${(renderNode / nodesCount) * 360}, 100%, 60%)`;
-                }
-            } else {
-                statusText.innerText = `AUTO-PILOT: SCANNING SECTOR ${renderNode} — ${connectionCount} CONNECTIONS`;
-                statusText.style.color = `hsl(${(renderNode / nodesCount) * 360}, 100%, 60%)`;
+            // New: Draw the targeting crosshair ring
+            if (renderNode !== null) {
+                const targetX = nodePositions[renderNode];
+                ctx.beginPath();
+                ctx.arc(targetX, baselineY, 12, 0, Math.PI * 2);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Update the HUD Matrix text
+                hudStatus.innerText = isInteracting ? 'STATUS: MANUAL OVERRIDE' : 'STATUS: AUTO-PILOT ACTIVE';
+                hudStatus.style.color = isInteracting ? '#ffcc00' : '#00ffcc';
+                
+                hudSector.innerText = `SECTOR: ${renderNode.toString().padStart(3, '0')}`;
+                hudLinks.innerText  = `LINKS:  ${connectionCount.toString().padStart(3, '0')}`;
+                
+                const density = ((connectionCount / arcsCount) * 100).toFixed(2);
+                hudDensity.innerText = `DENSITY: ${density}%`;
             }
 
-            // Tell the browser to draw the next frame immediately
             requestAnimationFrame(drawFrame);
         }
 
         function handleInteraction(event) {
             isInteracting = true;
-            clearTimeout(idleTimer); // Stop the timer from triggering auto-pilot
+            clearTimeout(idleTimer);
 
             const rect = canvas.getBoundingClientRect();
             let clientX;
@@ -219,14 +249,12 @@
         }
 
         function resetInteraction() {
-            // Wait 2.5 seconds after the user lets go, then resume auto-pilot
             idleTimer = setTimeout(() => {
                 isInteracting = false;
-                autoScanNode = activeNode || 0; // Start auto-pilot from where they left off
+                autoScanNode = activeNode || 0; 
             }, 2500);
         }
 
-        // Set up the touch controls
         canvas.addEventListener('mousedown', handleInteraction);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
         canvas.addEventListener('mouseup', resetInteraction);
@@ -236,9 +264,8 @@
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
         canvas.addEventListener('touchend', resetInteraction);
 
-        // Start the application
         resize();
-        requestAnimationFrame(drawFrame); // This starts the infinite animation loop
+        requestAnimationFrame(drawFrame);
     </script>
 </body>
 </html>
