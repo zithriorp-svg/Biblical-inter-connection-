@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arc Diagram Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            color: #ffffff;
+            font-family: sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 80vh;
+            position: relative;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .title {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            width: 100%;
+            font-size: 24px;
+            letter-spacing: 2px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="title">DATA CONNECTIONS</div>
+    <div id="canvas-container">
+        <canvas id="arcCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('arcCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        const nodesCount = 200; 
+        const arcsCount = 3000; 
+
+        function resize() {
+            width = canvas.parentElement.clientWidth;
+            height = canvas.parentElement.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+            draw();
+        }
+
+        window.addEventListener('resize', resize);
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            const baselineY = height - 50;
+            const margin = 50;
+            const drawableWidth = width - (margin * 2);
+            
+            // Draw baseline nodes
+            const nodePositions = [];
+            for (let i = 0; i < nodesCount; i++) {
+                const x = margin + (i / (nodesCount - 1)) * drawableWidth;
+                nodePositions.push(x);
+                
+                // Color bands for the bottom
+                const hue = (i / nodesCount) * 360;
+                ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
+                ctx.fillRect(x - 1, baselineY, 2, 15);
+            }
+
+            // Draw curved arcs connecting random nodes
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < arcsCount; i++) {
+                const startIndex = Math.floor(Math.random() * nodesCount);
+                let endIndex = Math.floor(Math.random() * nodesCount);
+                
+                // Bias towards creating some long arcs and some short arcs
+                if (Math.random() > 0.7) {
+                    endIndex = (startIndex + Math.floor(Math.random() * 20) + 1) % nodesCount;
+                }
+
+                if (startIndex === endIndex) continue;
+
+                const startX = nodePositions[startIndex];
+                const endX = nodePositions[endIndex];
+                const distance = Math.abs(startX - endX);
+                
+                // The taller the curve, the further the distance
+                const controlY = baselineY - (distance / 1.5); 
+                
+                const hue = (startIndex / nodesCount) * 360;
+                
+                // Use very low opacity to create the glowing overlapping effect
+                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.05)`; 
+
+                ctx.beginPath();
+                ctx.moveTo(startX, baselineY);
+                // Draw a bezier curve upwards and back down
+                ctx.bezierCurveTo(
+                    startX, controlY, 
+                    endX, controlY, 
+                    endX, baselineY
+                );
+                ctx.stroke();
+            }
+        }
+
+        // Initialize
+        resize();
+    </script>
+</body>
+</html>
