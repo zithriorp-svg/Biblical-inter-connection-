@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Command Center Interface</title>
+    <title>Biblical Cross-References</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #030806;
-            background-image: 
-                linear-gradient(rgba(0, 255, 204, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 204, 0.03) 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-color: #050505;
             color: #ffffff;
             font-family: sans-serif;
             overflow: hidden;
@@ -22,7 +18,6 @@
             justify-content: center;
             height: 100vh;
             touch-action: none;
-            transition: background-color 0.3s ease;
         }
         #canvas-container {
             width: 100%;
@@ -43,29 +38,27 @@
             pointer-events: none;
         }
         .title {
-            font-size: 22px;
-            letter-spacing: 4px;
+            font-size: 20px;
+            letter-spacing: 5px;
             opacity: 0.9;
             margin-bottom: 8px;
-            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+            text-transform: uppercase;
         }
         
         .hud-box {
             position: absolute;
-            bottom: 80px; 
+            bottom: 60px; 
             left: 20px;
-            background-color: rgba(0, 15, 10, 0.85);
-            border: 1px solid rgba(0, 255, 204, 0.5);
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 4px;
             padding: 12px;
             font-family: monospace;
             font-size: 12px;
-            color: #00ffcc;
+            color: #aaaaaa;
             pointer-events: none;
             z-index: 10;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.15);
             backdrop-filter: blur(4px);
-            transition: all 0.2s ease;
         }
         .hud-row {
             margin-bottom: 6px;
@@ -73,28 +66,21 @@
         }
         .hud-row span {
             color: #ffffff;
-        }
-        
-        /* Threat Detected Style */
-        .hud-box.alert {
-            border-color: #ff3333;
-            background-color: rgba(30, 0, 0, 0.85);
-            box-shadow: 0 0 20px rgba(255, 50, 50, 0.5);
-            color: #ff3333;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="title">NETWORK TELEMETRY</div>
+        <div class="title">BIBLICAL CROSS-REFERENCES</div>
     </div>
     
-    <div class="hud-box" id="telemetryHud">
-        <div class="hud-row" id="hudStatus">SYS: <span>INITIALIZING</span></div>
-        <div class="hud-row" id="hudSector">SEC: <span>000</span></div>
-        <div class="hud-row" id="hudLinks">LNK: <span>000</span></div>
-        <div class="hud-row" id="hudTraf">TRF: <span>0 PKT/S</span></div>
+    <div class="hud-box" id="infoHud">
+        <div class="hud-row" id="hudStatus">STATUS: <span>DOWNLOADING DATA...</span></div>
+        <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
+        <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
+        <div class="hud-row" id="hudLinks">LINKS: <span>---</span></div>
     </div>
 
     <div id="canvas-container">
@@ -105,284 +91,242 @@
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
         
-        const hudBox = document.getElementById('telemetryHud');
         const hudStatus = document.getElementById('hudStatus').querySelector('span');
-        const hudSector = document.getElementById('hudSector').querySelector('span');
+        const hudBook = document.getElementById('hudBook').querySelector('span');
+        const hudChap = document.getElementById('hudChap').querySelector('span');
         const hudLinks = document.getElementById('hudLinks').querySelector('span');
-        const hudTraf = document.getElementById('hudTraf').querySelector('span');
 
         let width, height;
-        const nodesCount = 300; 
-        const arcsCount = 4000; 
-        const arcs = [];
-        const nodePositions = [];
-        const packets = []; 
         
-        let activeNode = null; 
-        let isInteracting = false;
-        let autoScanNode = 0;
-        let scanDirection = 1;
-        let idleTimer = null;
+        // The real structure of the 66 books of the Bible
+        const books = [
+            { id: "Gen", name: "Genesis", ch: 50 }, { id: "Exod", name: "Exodus", ch: 40 }, { id: "Lev", name: "Leviticus", ch: 27 },
+            { id: "Num", name: "Numbers", ch: 36 }, { id: "Deut", name: "Deuteronomy", ch: 34 }, { id: "Josh", name: "Joshua", ch: 24 },
+            { id: "Judg", name: "Judges", ch: 21 }, { id: "Ruth", name: "Ruth", ch: 4 }, { id: "1Sam", name: "1 Samuel", ch: 31 },
+            { id: "2Sam", name: "2 Samuel", ch: 24 }, { id: "1Kgs", name: "1 Kings", ch: 22 }, { id: "2Kgs", name: "2 Kings", ch: 25 },
+            { id: "1Chr", name: "1 Chronicles", ch: 29 }, { id: "2Chr", name: "2 Chronicles", ch: 36 }, { id: "Ezra", name: "Ezra", ch: 10 },
+            { id: "Neh", name: "Nehemiah", ch: 13 }, { id: "Esth", name: "Esther", ch: 10 }, { id: "Job", name: "Job", ch: 42 },
+            { id: "Ps", name: "Psalms", ch: 150 }, { id: "Prov", name: "Proverbs", ch: 31 }, { id: "Eccl", name: "Ecclesiastes", ch: 12 },
+            { id: "Song", name: "Song of Solomon", ch: 8 }, { id: "Isa", name: "Isaiah", ch: 66 }, { id: "Jer", name: "Jeremiah", ch: 52 },
+            { id: "Lam", name: "Lamentations", ch: 5 }, { id: "Ezek", name: "Ezekiel", ch: 48 }, { id: "Dan", name: "Daniel", ch: 12 },
+            { id: "Hos", name: "Hosea", ch: 14 }, { id: "Joel", name: "Joel", ch: 3 }, { id: "Amos", name: "Amos", ch: 9 },
+            { id: "Obad", name: "Obadiah", ch: 1 }, { id: "Jonah", name: "Jonah", ch: 4 }, { id: "Mic", name: "Micah", ch: 7 },
+            { id: "Nah", name: "Nahum", ch: 3 }, { id: "Hab", name: "Habakkuk", ch: 3 }, { id: "Zeph", name: "Zephaniah", ch: 3 },
+            { id: "Hag", name: "Haggai", ch: 2 }, { id: "Zech", name: "Zechariah", ch: 14 }, { id: "Mal", name: "Malachi", ch: 4 },
+            { id: "Matt", name: "Matthew", ch: 28 }, { id: "Mark", name: "Mark", ch: 16 }, { id: "Luke", name: "Luke", ch: 24 },
+            { id: "John", name: "John", ch: 21 }, { id: "Acts", name: "Acts", ch: 28 }, { id: "Rom", name: "Romans", ch: 16 },
+            { id: "1Cor", name: "1 Corinthians", ch: 16 }, { id: "2Cor", name: "2 Corinthians", ch: 13 }, { id: "Gal", name: "Galatians", ch: 6 },
+            { id: "Eph", name: "Ephesians", ch: 6 }, { id: "Phil", name: "Philippians", ch: 4 }, { id: "Col", name: "Colossians", ch: 4 },
+            { id: "1Thess", name: "1 Thessalonians", ch: 5 }, { id: "2Thess", name: "2 Thessalonians", ch: 3 }, { id: "1Tim", name: "1 Timothy", ch: 6 },
+            { id: "2Tim", name: "2 Timothy", ch: 4 }, { id: "Titus", name: "Titus", ch: 3 }, { id: "Phlm", name: "Philemon", ch: 1 },
+            { id: "Heb", name: "Hebrews", ch: 13 }, { id: "Jas", name: "James", ch: 5 }, { id: "1Pet", name: "1 Peter", ch: 5 },
+            { id: "2Pet", name: "2 Peter", ch: 3 }, { id: "1John", name: "1 John", ch: 5 }, { id: "2John", name: "2 John", ch: 1 },
+            { id: "3John", name: "3 John", ch: 1 }, { id: "Jude", name: "Jude", ch: 1 }, { id: "Rev", name: "Revelation", ch: 22 }
+        ];
+
+        let totalChapters = 0;
+        const chapterNodes = []; 
+        const bookMap = {};
+
+        // Calculate global timeline position for all 1,189 chapters
+        books.forEach((book, bookIndex) => {
+            bookMap[book.id] = { index: bookIndex, name: book.name, startCh: totalChapters };
+            for(let i = 1; i <= book.ch; i++) {
+                chapterNodes.push({ bookIndex: bookIndex, bookName: book.name, localCh: i });
+            }
+            totalChapters += book.ch;
+        });
+
+        const arcs = [];
+        let renderProgress = 0;
+        let activeChapterIndex = null;
 
         function resize() {
             width = canvas.parentElement.clientWidth;
             height = canvas.parentElement.clientHeight;
             canvas.width = width;
             canvas.height = height;
-            initData();
+            if (arcs.length > 0) drawInstantly();
         }
 
         window.addEventListener('resize', resize);
 
-        function initData() {
-            arcs.length = 0;
-            nodePositions.length = 0;
-            packets.length = 0;
-            
-            const margin = 20;
-            const drawableWidth = width - (margin * 2);
-
-            for (let i = 0; i < nodesCount; i++) {
-                nodePositions.push(margin + (i / (nodesCount - 1)) * drawableWidth);
-            }
-
-            for (let i = 0; i < arcsCount; i++) {
-                const startIndex = Math.floor(Math.random() * nodesCount);
-                let endIndex = Math.floor(Math.random() * nodesCount);
+        // Fetch the REAL cross-reference dataset from OpenBible.info
+        async function loadRealData() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt');
+                const text = await response.text();
                 
-                if (Math.random() > 0.6) {
-                    endIndex = (startIndex + Math.floor(Math.random() * 50) + 1) % nodesCount;
-                }
+                const lines = text.split('\n');
+                
+                hudStatus.innerText = "PROCESSING DATA...";
 
-                if (startIndex !== endIndex) {
-                    arcs.push({ 
-                        start: startIndex, 
-                        end: endIndex,
-                        // 3% chance this connection is a "Critical Anomaly"
-                        isAnomaly: Math.random() > 0.97 
-                    });
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split('\t');
+                    if (parts.length >= 2) {
+                        const fromRef = parts[0].split('.');
+                        const toRef = parts[1].split('.');
+                        
+                        const b1 = bookMap[fromRef[0]];
+                        const b2 = bookMap[toRef[0]];
+                        
+                        if (b1 && b2) {
+                            const c1 = b1.startCh + (parseInt(fromRef[1]) - 1);
+                            const c2 = b2.startCh + (parseInt(toRef[1]) - 1);
+                            arcs.push({ start: c1, end: c2, book1: b1.index, book2: b2.index });
+                        }
+                    }
                 }
+                
+                hudStatus.innerText = "63,000+ CONNECTIONS LOADED";
+                hudStatus.style.color = "#00ffcc";
+                
+                // Start drawing the heavy dataset smoothly
+                animateDrawing();
+
+            } catch (err) {
+                hudStatus.innerText = "ERROR LOADING DATA";
+                hudStatus.style.color = "#ff3333";
             }
         }
 
-        function getBezierPoint(t, p0, p1, p2) {
-            const x = Math.pow(1 - t, 2) * p0.x + 2 * (1 - t) * t * p1.x + Math.pow(t, 2) * p2.x;
-            const y = Math.pow(1 - t, 2) * p0.y + 2 * (1 - t) * t * p1.y + Math.pow(t, 2) * p2.y;
-            return { x, y };
+        function getX(index) {
+            const margin = 20;
+            return margin + (index / (totalChapters - 1)) * (width - margin * 2);
         }
 
-        function drawFrame() {
-            ctx.clearRect(0, 0, width, height);
+        function animateDrawing() {
             const baselineY = height - 40;
+            const batchSize = 500; // Draw 500 lines per frame so it doesn't freeze the phone
+            
+            ctx.clearRect(0, 0, width, height);
 
-            let renderNode = null;
-            let criticalThreatDetected = false;
-
-            if (isInteracting) {
-                renderNode = activeNode;
-            } else {
-                autoScanNode += scanDirection * 0.3; 
-                if (autoScanNode >= nodesCount - 1 || autoScanNode <= 0) {
-                    scanDirection *= -1; 
-                }
-                renderNode = Math.floor(autoScanNode);
+            // Draw Bottom Bar (Chapters)
+            for (let i = 0; i < totalChapters; i++) {
+                const hue = (chapterNodes[i].bookIndex / books.length) * 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.fillRect(getX(i) - 0.5, baselineY, 1.5, 15);
             }
 
-            // Draw Bottom Bar
-            for (let i = 0; i < nodesCount; i++) {
-                const hue = (i / nodesCount) * 360;
-                if (renderNode !== null && Math.abs(renderNode - i) > 5) {
-                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.1)`;
+            ctx.lineWidth = 0.2;
+            
+            function drawBatch() {
+                const limit = Math.min(renderProgress + batchSize, arcs.length);
+                
+                for (let i = renderProgress; i < limit; i++) {
+                    const arc = arcs[i];
+                    const startX = getX(arc.start);
+                    const endX = getX(arc.end);
+                    const distance = Math.abs(startX - endX);
+                    const controlY = baselineY - (distance * 0.9); 
+                    const hue = (arc.book1 / books.length) * 360;
+                    
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.03)`; // Extremely low opacity for density effect
+                    ctx.beginPath();
+                    ctx.moveTo(startX, baselineY);
+                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                    ctx.stroke();
+                }
+                
+                renderProgress = limit;
+                if (renderProgress < arcs.length) {
+                    requestAnimationFrame(drawBatch);
+                }
+            }
+            drawBatch();
+        }
+
+        function drawInstantly() {
+            const baselineY = height - 40;
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < totalChapters; i++) {
+                const hue = (chapterNodes[i].bookIndex / books.length) * 360;
+                if (activeChapterIndex !== null && i !== activeChapterIndex) {
+                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
                 } else {
                     ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
                 }
-                ctx.fillRect(nodePositions[i] - 1, baselineY, 2, 30);
+                ctx.fillRect(getX(i) - 0.5, baselineY, 1.5, 15);
             }
 
-            let connectionCount = 0;
-            const activeArcs = [];
+            let isolatedLinks = 0;
 
-            // Draw Lines
             for (let i = 0; i < arcs.length; i++) {
                 const arc = arcs[i];
-                const startX = nodePositions[arc.start];
-                const endX = nodePositions[arc.end];
-                const distanceX = Math.abs(startX - endX);
-                const controlY = baselineY - (distanceX * 0.9); 
-                const hue = (arc.start / nodesCount) * 360;
+                const startX = getX(arc.start);
+                const endX = getX(arc.end);
+                const distance = Math.abs(startX - endX);
+                const controlY = baselineY - (distance * 0.9); 
+                const hue = (arc.book1 / books.length) * 360;
                 
-                let opacity = 0.1; 
-                let isConnected = false;
-                
-                if (renderNode !== null) {
-                    isConnected = Math.abs(arc.start - renderNode) <= 5 || Math.abs(arc.end - renderNode) <= 5;
-                    if (isConnected) {
-                        connectionCount++;
-                        activeArcs.push(arc);
-                        
-                        if (arc.isAnomaly) {
-                            criticalThreatDetected = true;
-                            opacity = 1.0;
-                            ctx.lineWidth = 2.0;
-                            ctx.strokeStyle = `rgba(255, 50, 50, ${opacity})`;
-                        } else {
-                            opacity = 0.7; 
-                            ctx.lineWidth = 1.0;
-                            ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
-                        }
-                    } else {
-                        opacity = 0.02; 
-                        ctx.lineWidth = 0.5;
-                        ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
+                if (activeChapterIndex !== null) {
+                    if (arc.start === activeChapterIndex || arc.end === activeChapterIndex) {
+                        ctx.lineWidth = 1.0;
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.5)`;
+                        isolatedLinks++;
+                        ctx.beginPath();
+                        ctx.moveTo(startX, baselineY);
+                        ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                        ctx.stroke();
                     }
                 } else {
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
+                    ctx.lineWidth = 0.2;
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.03)`;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, baselineY);
+                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                    ctx.stroke();
                 }
-
-                if (isConnected && arc.isAnomaly) {
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#ff0000';
-                }
-
-                ctx.beginPath();
-                ctx.moveTo(startX, baselineY);
-                ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
-                ctx.stroke();
-                ctx.shadowBlur = 0; // reset
             }
 
-            // Spawn Packets
-            if (activeArcs.length > 0 && Math.random() > 0.5 && packets.length < 50) {
-                const randomArc = activeArcs[Math.floor(Math.random() * activeArcs.length)];
-                packets.push({
-                    arc: randomArc,
-                    progress: 0,
-                    speed: 0.01 + (Math.random() * 0.015) 
-                });
-            }
-
-            // Draw Packets
-            for (let i = packets.length - 1; i >= 0; i--) {
-                const pkt = packets[i];
-                pkt.progress += pkt.speed;
-
-                if (pkt.progress >= 1) {
-                    packets.splice(i, 1); 
-                    continue;
-                }
-
-                const startX = nodePositions[pkt.arc.start];
-                const endX = nodePositions[pkt.arc.end];
-                const controlY = baselineY - (Math.abs(startX - endX) * 0.9);
-
-                const p0 = { x: startX, y: baselineY };
-                const p1 = { x: startX, y: controlY }; 
-                const p2 = { x: endX, y: controlY };   
-                const p3 = { x: endX, y: baselineY };  
-
-                const pos = getBezierPoint(pkt.progress, p0, {x: (startX+endX)/2, y: controlY}, p3);
-
+            if (activeChapterIndex !== null) {
+                const targetX = getX(activeChapterIndex);
                 ctx.beginPath();
-                ctx.arc(pos.x, pos.y, pkt.arc.isAnomaly ? 4 : 2.5, 0, Math.PI * 2);
-                
-                if (pkt.arc.isAnomaly) {
-                    ctx.fillStyle = '#ff3333';
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#ff0000';
-                } else {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#00ffcc';
-                }
-                
+                ctx.arc(targetX, baselineY, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
                 ctx.fill();
-                ctx.shadowBlur = 0; 
+                
+                const node = chapterNodes[activeChapterIndex];
+                hudBook.innerText = node.bookName;
+                hudChap.innerText = node.localCh;
+                hudLinks.innerText = isolatedLinks;
+            } else {
+                hudBook.innerText = "---";
+                hudChap.innerText = "---";
+                hudLinks.innerText = "---";
             }
-
-            // Draw Crosshair and Update HUD
-            if (renderNode !== null) {
-                const targetX = nodePositions[renderNode];
-                ctx.beginPath();
-                ctx.arc(targetX, baselineY, 12, 0, Math.PI * 2);
-                ctx.strokeStyle = criticalThreatDetected ? '#ff3333' : '#ffffff';
-                ctx.lineWidth = criticalThreatDetected ? 3 : 2;
-                ctx.stroke();
-                
-                // HUD Logic
-                if (criticalThreatDetected) {
-                    hudBox.classList.add('alert');
-                    hudStatus.innerText = 'WARNING: ANOMALY';
-                    hudStatus.style.color = '#ff3333';
-                    document.body.style.backgroundColor = '#1a0505'; // Flash background slightly
-                } else {
-                    hudBox.classList.remove('alert');
-                    hudStatus.innerText = isInteracting ? 'MANUAL OVERRIDE' : 'AUTO-SCAN ACTIVE';
-                    hudStatus.style.color = isInteracting ? '#ffaa00' : '#ffffff';
-                    document.body.style.backgroundColor = '#030806';
-                }
-                
-                hudSector.innerText = renderNode.toString().padStart(3, '0');
-                hudLinks.innerText  = connectionCount.toString().padStart(3, '0');
-                hudTraf.innerText = `${Math.floor(packets.length * 1.5)} PKT/S`;
-                
-                if(criticalThreatDetected) {
-                    hudSector.style.color = '#ff3333';
-                    hudLinks.style.color = '#ff3333';
-                    hudTraf.style.color = '#ff3333';
-                } else {
-                    hudSector.style.color = '#ffffff';
-                    hudLinks.style.color = '#ffffff';
-                    hudTraf.style.color = '#ffffff';
-                }
-            }
-
-            requestAnimationFrame(drawFrame);
         }
 
         function handleInteraction(event) {
-            isInteracting = true;
-            clearTimeout(idleTimer);
-
             const rect = canvas.getBoundingClientRect();
-            let clientX;
-            
-            if (event.touches && event.touches.length > 0) {
-                clientX = event.touches[0].clientX;
-            } else {
-                clientX = event.clientX;
-            }
-            
-            const x = clientX - rect.left;
+            let clientX = event.touches && event.touches.length > 0 ? event.touches[0].clientX : event.clientX;
             const margin = 20;
-            const drawableWidth = width - (margin * 2);
-            const percentage = (x - margin) / drawableWidth;
+            const percentage = (clientX - rect.left - margin) / (width - margin * 2);
             
             if (percentage >= 0 && percentage <= 1) {
-                activeNode = Math.floor(percentage * nodesCount);
+                activeChapterIndex = Math.floor(percentage * totalChapters);
             } else {
-                activeNode = null; 
+                activeChapterIndex = null; 
             }
+            drawInstantly();
         }
 
         function resetInteraction() {
-            idleTimer = setTimeout(() => {
-                isInteracting = false;
-                autoScanNode = activeNode || 0; 
-                packets.length = 0; 
-            }, 2000);
+            activeChapterIndex = null;
+            drawInstantly();
         }
 
         canvas.addEventListener('mousedown', handleInteraction);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
         canvas.addEventListener('mouseup', resetInteraction);
         canvas.addEventListener('mouseleave', resetInteraction);
-
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
         canvas.addEventListener('touchend', resetInteraction);
 
         resize();
-        requestAnimationFrame(drawFrame);
+        loadRealData();
     </script>
 </body>
 </html>
