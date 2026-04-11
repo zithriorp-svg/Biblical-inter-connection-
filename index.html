@@ -145,12 +145,12 @@
 
         async function loadRealData() {
             try {
-                hudStatus.innerText = "DOWNLOADING DATASET...";
+                hudStatus.innerText = "DOWNLOADING REAL DATA...";
                 const response = await fetch('https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt');
                 const text = await response.text();
                 
                 const lines = text.split('\n');
-                hudStatus.innerText = "OPTIMIZING DATA...";
+                hudStatus.innerText = "OPTIMIZING FOR MOBILE...";
 
                 const uniqueLinks = new Set();
 
@@ -182,7 +182,7 @@
                     }
                 }
                 
-                hudStatus.innerText = "SYSTEM READY: TAP RAINBOW BAR";
+                hudStatus.innerText = "SYSTEM READY: DRAG RAINBOW BAR";
                 hudStatus.style.color = "#00ffcc";
                 
                 drawInstantly();
@@ -202,6 +202,7 @@
             const baselineY = height - 80;
             ctx.clearRect(0, 0, width, height);
 
+            // Draw the rainbow timeline bar at the bottom
             for (let i = 0; i < totalChapters; i++) {
                 const hue = (chapterNodes[i].bookIndex / books.length) * 360;
                 if (activeChapterIndex !== null && i !== activeChapterIndex) {
@@ -213,8 +214,11 @@
             }
 
             if (activeChapterIndex === null) {
+                // MOBILE OPTIMIZER: Safely draw ~2,500 real lines so the phone doesn't crash
                 ctx.lineWidth = 0.5;
-                for (let i = 0; i < arcs.length; i++) {
+                const safeStep = Math.max(1, Math.floor(arcs.length / 2500)); 
+
+                for (let i = 0; i < arcs.length; i += safeStep) {
                     const arc = arcs[i];
                     const startX = getX(arc.start);
                     const endX = getX(arc.end);
@@ -222,7 +226,7 @@
                     const controlY = baselineY - (distance * 0.9); 
                     const hue = (arc.book1 / books.length) * 360;
                     
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.15)`; 
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.25)`; 
                     ctx.beginPath();
                     ctx.moveTo(startX, baselineY);
                     ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
@@ -234,6 +238,7 @@
                 hudLinks.innerText = "---";
             } 
             else {
+                // WHEN TOUCHED: Draw 100% of the true, real connections for that exact chapter
                 const activeLinks = chapterArcs[activeChapterIndex] || [];
                 ctx.lineWidth = 1.2;
 
@@ -252,12 +257,14 @@
                     ctx.stroke();
                 }
 
+                // Draw the white targeting dot where your finger is
                 const targetX = getX(activeChapterIndex);
                 ctx.beginPath();
                 ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
                 ctx.fillStyle = '#ffffff';
                 ctx.fill();
                 
+                // Update the HUD with real biblical data
                 const node = chapterNodes[activeChapterIndex];
                 hudBook.innerText = node.bookName;
                 hudChap.innerText = node.localCh;
@@ -299,3 +306,4 @@
     </script>
 </body>
 </html>
+
