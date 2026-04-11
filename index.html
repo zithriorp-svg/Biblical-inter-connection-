@@ -17,6 +17,7 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            touch-action: none; /* Prevents the screen from accidentally scrolling while dragging */
         }
         #canvas-container {
             width: 100%;
@@ -28,34 +29,35 @@
             width: 100%;
             height: 100%;
         }
-        .title {
+        .header {
             position: absolute;
-            top: 20px;
+            top: 30px;
             text-align: center;
             width: 100%;
-            font-size: 20px;
-            letter-spacing: 2px;
-            opacity: 0.8;
             z-index: 10;
             pointer-events: none;
         }
+        .title {
+            font-size: 22px;
+            letter-spacing: 3px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
         .subtitle {
-            position: absolute;
-            top: 50px;
-            text-align: center;
-            width: 100%;
             font-size: 12px;
-            color: #aaaaaa;
-            z-index: 10;
-            pointer-events: none;
-            letter-spacing: 1px;
+            color: #00ffcc;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <div class="title">DATA CONNECTIONS</div>
-    <div class="subtitle">TAP THE RAINBOW BAR TO HIGHLIGHT</div>
+    <div class="header">
+        <div class="title">DATA CONNECTIONS</div>
+        <div class="subtitle" id="statusText">DRAG FINGER ACROSS BOTTOM BAR</div>
+    </div>
     <div id="canvas-container">
         <canvas id="arcCanvas"></canvas>
     </div>
@@ -63,6 +65,7 @@
     <script>
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
+        const statusText = document.getElementById('statusText');
 
         let width, height;
         const nodesCount = 300; 
@@ -116,7 +119,7 @@
                 const hue = (i / nodesCount) * 360;
                 
                 if (activeNode !== null && Math.abs(activeNode - i) > 5) {
-                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
+                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.1)`;
                 } else {
                     ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
                 }
@@ -125,6 +128,8 @@
             }
 
             ctx.lineWidth = 0.5;
+            let connectionCount = 0;
+
             for (let i = 0; i < arcs.length; i++) {
                 const arc = arcs[i];
                 const startX = nodePositions[arc.start];
@@ -138,8 +143,9 @@
                 if (activeNode !== null) {
                     const isConnected = Math.abs(arc.start - activeNode) <= 5 || Math.abs(arc.end - activeNode) <= 5;
                     if (isConnected) {
-                        opacity = 0.8; 
+                        opacity = 0.9; 
                         ctx.lineWidth = 1.5;
+                        connectionCount++;
                     } else {
                         opacity = 0.02; 
                         ctx.lineWidth = 0.5;
@@ -153,6 +159,14 @@
                 ctx.moveTo(startX, baselineY);
                 ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
                 ctx.stroke();
+            }
+
+            if (activeNode !== null) {
+                statusText.innerText = `SCANNING SECTOR ${activeNode} — FOUND ${connectionCount} CONNECTIONS`;
+                statusText.style.color = `hsl(${(activeNode / nodesCount) * 360}, 100%, 60%)`;
+            } else {
+                statusText.innerText = "DRAG FINGER ACROSS BOTTOM BAR";
+                statusText.style.color = "#00ffcc";
             }
         }
 
@@ -180,8 +194,19 @@
             drawInstantly();
         }
 
+        function resetInteraction() {
+            activeNode = null;
+            drawInstantly();
+        }
+
         canvas.addEventListener('mousedown', handleInteraction);
+        canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
+        canvas.addEventListener('mouseup', resetInteraction);
+        canvas.addEventListener('mouseleave', resetInteraction);
+
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
+        canvas.addEventListener('touchmove', handleInteraction, {passive: true});
+        canvas.addEventListener('touchend', resetInteraction);
 
         resize();
     </script>
