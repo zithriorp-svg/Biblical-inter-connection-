@@ -22,6 +22,7 @@
             justify-content: center;
             height: 100vh;
             touch-action: none;
+            transition: background-color 0.3s ease;
         }
         #canvas-container {
             width: 100%;
@@ -64,6 +65,7 @@
             z-index: 10;
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.15);
             backdrop-filter: blur(4px);
+            transition: all 0.2s ease;
         }
         .hud-row {
             margin-bottom: 6px;
@@ -71,6 +73,14 @@
         }
         .hud-row span {
             color: #ffffff;
+        }
+        
+        /* Threat Detected Style */
+        .hud-box.alert {
+            border-color: #ff3333;
+            background-color: rgba(30, 0, 0, 0.85);
+            box-shadow: 0 0 20px rgba(255, 50, 50, 0.5);
+            color: #ff3333;
         }
     </style>
 </head>
@@ -95,6 +105,7 @@
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
         
+        const hudBox = document.getElementById('telemetryHud');
         const hudStatus = document.getElementById('hudStatus').querySelector('span');
         const hudSector = document.getElementById('hudSector').querySelector('span');
         const hudLinks = document.getElementById('hudLinks').querySelector('span');
@@ -105,7 +116,7 @@
         const arcsCount = 4000; 
         const arcs = [];
         const nodePositions = [];
-        const packets = []; // Holds the live data dots
+        const packets = []; 
         
         let activeNode = null; 
         let isInteracting = false;
@@ -147,14 +158,14 @@
                     arcs.push({ 
                         start: startIndex, 
                         end: endIndex,
-                        distance: Math.abs(startIndex - endIndex)
+                        // 3% chance this connection is a "Critical Anomaly"
+                        isAnomaly: Math.random() > 0.97 
                     });
                 }
             }
         }
 
         function getBezierPoint(t, p0, p1, p2) {
-            // Math magic to find the exact x/y of a curved line at any given percentage (t)
             const x = Math.pow(1 - t, 2) * p0.x + 2 * (1 - t) * t * p1.x + Math.pow(t, 2) * p2.x;
             const y = Math.pow(1 - t, 2) * p0.y + 2 * (1 - t) * t * p1.y + Math.pow(t, 2) * p2.y;
             return { x, y };
@@ -165,6 +176,7 @@
             const baselineY = height - 40;
 
             let renderNode = null;
+            let criticalThreatDetected = false;
 
             if (isInteracting) {
                 renderNode = activeNode;
@@ -205,40 +217,57 @@
                 if (renderNode !== null) {
                     isConnected = Math.abs(arc.start - renderNode) <= 5 || Math.abs(arc.end - renderNode) <= 5;
                     if (isConnected) {
-                        opacity = 0.7; 
-                        ctx.lineWidth = 1.0;
                         connectionCount++;
-                        activeArcs.push(arc); // Save to spawn packets later
+                        activeArcs.push(arc);
+                        
+                        if (arc.isAnomaly) {
+                            criticalThreatDetected = true;
+                            opacity = 1.0;
+                            ctx.lineWidth = 2.0;
+                            ctx.strokeStyle = `rgba(255, 50, 50, ${opacity})`;
+                        } else {
+                            opacity = 0.7; 
+                            ctx.lineWidth = 1.0;
+                            ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
+                        }
                     } else {
                         opacity = 0.02; 
                         ctx.lineWidth = 0.5;
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
                     }
+                } else {
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
                 }
 
-                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${opacity})`; 
+                if (isConnected && arc.isAnomaly) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#ff0000';
+                }
+
                 ctx.beginPath();
                 ctx.moveTo(startX, baselineY);
                 ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
                 ctx.stroke();
+                ctx.shadowBlur = 0; // reset
             }
 
-            // Spawn new Data Packets randomly on active connections
+            // Spawn Packets
             if (activeArcs.length > 0 && Math.random() > 0.5 && packets.length < 50) {
                 const randomArc = activeArcs[Math.floor(Math.random() * activeArcs.length)];
                 packets.push({
                     arc: randomArc,
                     progress: 0,
-                    speed: 0.01 + (Math.random() * 0.015) // Speed of the dot
+                    speed: 0.01 + (Math.random() * 0.015) 
                 });
             }
 
-            // Draw and move Data Packets
+            // Draw Packets
             for (let i = packets.length - 1; i >= 0; i--) {
                 const pkt = packets[i];
                 pkt.progress += pkt.speed;
 
                 if (pkt.progress >= 1) {
-                    packets.splice(i, 1); // Remove packet when it reaches the end
+                    packets.splice(i, 1); 
                     continue;
                 }
 
@@ -247,38 +276,64 @@
                 const controlY = baselineY - (Math.abs(startX - endX) * 0.9);
 
                 const p0 = { x: startX, y: baselineY };
-                const p1 = { x: startX, y: controlY }; // Control point 1
-                const p2 = { x: endX, y: controlY };   // Control point 2 (simulated quad curve)
-                const p3 = { x: endX, y: baselineY };  // End point
+                const p1 = { x: startX, y: controlY }; 
+                const p2 = { x: endX, y: controlY };   
+                const p3 = { x: endX, y: baselineY };  
 
-                // Simplified bezier for packets
                 const pos = getBezierPoint(pkt.progress, p0, {x: (startX+endX)/2, y: controlY}, p3);
 
                 ctx.beginPath();
-                ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#00ffcc';
+                ctx.arc(pos.x, pos.y, pkt.arc.isAnomaly ? 4 : 2.5, 0, Math.PI * 2);
+                
+                if (pkt.arc.isAnomaly) {
+                    ctx.fillStyle = '#ff3333';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ff0000';
+                } else {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#00ffcc';
+                }
+                
                 ctx.fill();
-                ctx.shadowBlur = 0; // reset
+                ctx.shadowBlur = 0; 
             }
 
-            // Draw Targeting Crosshair
+            // Draw Crosshair and Update HUD
             if (renderNode !== null) {
                 const targetX = nodePositions[renderNode];
                 ctx.beginPath();
                 ctx.arc(targetX, baselineY, 12, 0, Math.PI * 2);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = criticalThreatDetected ? '#ff3333' : '#ffffff';
+                ctx.lineWidth = criticalThreatDetected ? 3 : 2;
                 ctx.stroke();
                 
-                // Update HUD
-                hudStatus.innerText = isInteracting ? 'MANUAL OVERRIDE' : 'AUTO-SCAN ACTIVE';
-                hudStatus.style.color = isInteracting ? '#ffaa00' : '#ffffff';
+                // HUD Logic
+                if (criticalThreatDetected) {
+                    hudBox.classList.add('alert');
+                    hudStatus.innerText = 'WARNING: ANOMALY';
+                    hudStatus.style.color = '#ff3333';
+                    document.body.style.backgroundColor = '#1a0505'; // Flash background slightly
+                } else {
+                    hudBox.classList.remove('alert');
+                    hudStatus.innerText = isInteracting ? 'MANUAL OVERRIDE' : 'AUTO-SCAN ACTIVE';
+                    hudStatus.style.color = isInteracting ? '#ffaa00' : '#ffffff';
+                    document.body.style.backgroundColor = '#030806';
+                }
                 
                 hudSector.innerText = renderNode.toString().padStart(3, '0');
                 hudLinks.innerText  = connectionCount.toString().padStart(3, '0');
                 hudTraf.innerText = `${Math.floor(packets.length * 1.5)} PKT/S`;
+                
+                if(criticalThreatDetected) {
+                    hudSector.style.color = '#ff3333';
+                    hudLinks.style.color = '#ff3333';
+                    hudTraf.style.color = '#ff3333';
+                } else {
+                    hudSector.style.color = '#ffffff';
+                    hudLinks.style.color = '#ffffff';
+                    hudTraf.style.color = '#ffffff';
+                }
             }
 
             requestAnimationFrame(drawFrame);
@@ -313,7 +368,7 @@
             idleTimer = setTimeout(() => {
                 isInteracting = false;
                 autoScanNode = activeNode || 0; 
-                packets.length = 0; // Clear packets when switching back to auto
+                packets.length = 0; 
             }, 2000);
         }
 
