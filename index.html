@@ -20,7 +20,7 @@
         }
         #canvas-container {
             width: 100%;
-            height: 80vh;
+            height: 90vh; /* Made taller */
             position: relative;
         }
         canvas {
@@ -36,6 +36,7 @@
             font-size: 24px;
             letter-spacing: 2px;
             opacity: 0.8;
+            z-index: 10;
         }
     </style>
 </head>
@@ -51,77 +52,95 @@
         const ctx = canvas.getContext('2d');
 
         let width, height;
-        const nodesCount = 200; 
-        const arcsCount = 3000; 
+        const nodesCount = 300; // More points
+        const arcsCount = 4000; // More lines
+        const arcs = [];
+        const nodePositions = [];
 
         function resize() {
             width = canvas.parentElement.clientWidth;
             height = canvas.parentElement.clientHeight;
             canvas.width = width;
             canvas.height = height;
-            draw();
+            initData();
         }
 
         window.addEventListener('resize', resize);
 
-        function draw() {
-            ctx.clearRect(0, 0, width, height);
-
-            const baselineY = height - 50;
-            const margin = 50;
-            const drawableWidth = width - (margin * 2);
+        function initData() {
+            // Reset data
+            arcs.length = 0;
+            nodePositions.length = 0;
             
-            // Draw baseline nodes
-            const nodePositions = [];
+            const baselineY = height - 20;
+            const margin = 20;
+            const drawableWidth = width - (margin * 2);
+
+            // Calculate bottom points
             for (let i = 0; i < nodesCount; i++) {
-                const x = margin + (i / (nodesCount - 1)) * drawableWidth;
-                nodePositions.push(x);
-                
-                // Color bands for the bottom
-                const hue = (i / nodesCount) * 360;
-                ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
-                ctx.fillRect(x - 1, baselineY, 2, 15);
+                nodePositions.push(margin + (i / (nodesCount - 1)) * drawableWidth);
             }
 
-            // Draw curved arcs connecting random nodes
-            ctx.lineWidth = 0.5;
+            // Calculate connections
             for (let i = 0; i < arcsCount; i++) {
                 const startIndex = Math.floor(Math.random() * nodesCount);
                 let endIndex = Math.floor(Math.random() * nodesCount);
                 
-                // Bias towards creating some long arcs and some short arcs
-                if (Math.random() > 0.7) {
-                    endIndex = (startIndex + Math.floor(Math.random() * 20) + 1) % nodesCount;
+                if (Math.random() > 0.6) {
+                    endIndex = (startIndex + Math.floor(Math.random() * 50) + 1) % nodesCount;
                 }
 
-                if (startIndex === endIndex) continue;
+                if (startIndex !== endIndex) {
+                    arcs.push({ start: startIndex, end: endIndex });
+                }
+            }
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw the solid bottom rainbow bar
+            for (let i = 0; i < nodesCount; i++) {
+                const hue = (i / nodesCount) * 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                ctx.fillRect(nodePositions[i] - 1, baselineY, 2, 20);
+            }
 
-                const startX = nodePositions[startIndex];
-                const endX = nodePositions[endIndex];
+            // Start the drawing animation
+            drawAnimation(0, baselineY);
+        }
+
+        function drawAnimation(index, baselineY) {
+            // Draw 20 lines per frame so it animates smoothly
+            for (let j = 0; j < 20; j++) {
+                if (index >= arcs.length) return;
+
+                const arc = arcs[index];
+                const startX = nodePositions[arc.start];
+                const endX = nodePositions[arc.end];
                 const distance = Math.abs(startX - endX);
                 
-                // The taller the curve, the further the distance
-                const controlY = baselineY - (distance / 1.5); 
+                // Calculate curve height based on distance
+                const controlY = baselineY - (distance * 0.9); 
                 
-                const hue = (startIndex / nodesCount) * 360;
+                const hue = (arc.start / nodesCount) * 360;
                 
-                // Use very low opacity to create the glowing overlapping effect
-                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.05)`; 
+                ctx.lineWidth = 0.5;
+                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.15)`; 
 
                 ctx.beginPath();
                 ctx.moveTo(startX, baselineY);
-                // Draw a bezier curve upwards and back down
-                ctx.bezierCurveTo(
-                    startX, controlY, 
-                    endX, controlY, 
-                    endX, baselineY
-                );
+                ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
                 ctx.stroke();
+
+                index++;
             }
+            
+            // Tell the browser to keep drawing the next batch
+            requestAnimationFrame(() => drawAnimation(index, baselineY));
         }
 
-        // Initialize
+        // Start everything
         resize();
     </script>
 </body>
 </html>
+
