@@ -8,7 +8,11 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #050505;
+            background-color: #030806;
+            background-image: 
+                linear-gradient(rgba(0, 255, 204, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 204, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
             color: #ffffff;
             font-family: sans-serif;
             overflow: hidden;
@@ -39,44 +43,48 @@
         }
         .title {
             font-size: 22px;
-            letter-spacing: 3px;
+            letter-spacing: 4px;
             opacity: 0.9;
             margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
         }
         
-        /* New Telemetry HUD Styling */
         .hud-box {
             position: absolute;
             bottom: 80px; 
             left: 20px;
-            background-color: rgba(0, 20, 10, 0.7);
-            border: 1px solid #00ffcc;
+            background-color: rgba(0, 15, 10, 0.85);
+            border: 1px solid rgba(0, 255, 204, 0.5);
             border-radius: 4px;
-            padding: 10px;
+            padding: 12px;
             font-family: monospace;
             font-size: 12px;
             color: #00ffcc;
             pointer-events: none;
             z-index: 10;
-            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.15);
+            backdrop-filter: blur(4px);
         }
         .hud-row {
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             letter-spacing: 1px;
+        }
+        .hud-row span {
+            color: #ffffff;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="title">DATA CONNECTIONS</div>
+        <div class="title">NETWORK TELEMETRY</div>
     </div>
     
     <div class="hud-box" id="telemetryHud">
-        <div class="hud-row" id="hudStatus">STATUS: INITIALIZING...</div>
-        <div class="hud-row" id="hudSector">SECTOR: 000</div>
-        <div class="hud-row" id="hudLinks">LINKS:  000</div>
-        <div class="hud-row" id="hudDensity">DENSITY: 0.00%</div>
+        <div class="hud-row" id="hudStatus">SYS: <span>INITIALIZING</span></div>
+        <div class="hud-row" id="hudSector">SEC: <span>000</span></div>
+        <div class="hud-row" id="hudLinks">LNK: <span>000</span></div>
+        <div class="hud-row" id="hudTraf">TRF: <span>0 PKT/S</span></div>
     </div>
 
     <div id="canvas-container">
@@ -87,17 +95,17 @@
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
         
-        // HUD Elements
-        const hudStatus = document.getElementById('hudStatus');
-        const hudSector = document.getElementById('hudSector');
-        const hudLinks = document.getElementById('hudLinks');
-        const hudDensity = document.getElementById('hudDensity');
+        const hudStatus = document.getElementById('hudStatus').querySelector('span');
+        const hudSector = document.getElementById('hudSector').querySelector('span');
+        const hudLinks = document.getElementById('hudLinks').querySelector('span');
+        const hudTraf = document.getElementById('hudTraf').querySelector('span');
 
         let width, height;
         const nodesCount = 300; 
         const arcsCount = 4000; 
         const arcs = [];
         const nodePositions = [];
+        const packets = []; // Holds the live data dots
         
         let activeNode = null; 
         let isInteracting = false;
@@ -118,6 +126,7 @@
         function initData() {
             arcs.length = 0;
             nodePositions.length = 0;
+            packets.length = 0;
             
             const margin = 20;
             const drawableWidth = width - (margin * 2);
@@ -135,9 +144,20 @@
                 }
 
                 if (startIndex !== endIndex) {
-                    arcs.push({ start: startIndex, end: endIndex });
+                    arcs.push({ 
+                        start: startIndex, 
+                        end: endIndex,
+                        distance: Math.abs(startIndex - endIndex)
+                    });
                 }
             }
+        }
+
+        function getBezierPoint(t, p0, p1, p2) {
+            // Math magic to find the exact x/y of a curved line at any given percentage (t)
+            const x = Math.pow(1 - t, 2) * p0.x + 2 * (1 - t) * t * p1.x + Math.pow(t, 2) * p2.x;
+            const y = Math.pow(1 - t, 2) * p0.y + 2 * (1 - t) * t * p1.y + Math.pow(t, 2) * p2.y;
+            return { x, y };
         }
 
         function drawFrame() {
@@ -149,44 +169,46 @@
             if (isInteracting) {
                 renderNode = activeNode;
             } else {
-                autoScanNode += scanDirection * 0.4; 
+                autoScanNode += scanDirection * 0.3; 
                 if (autoScanNode >= nodesCount - 1 || autoScanNode <= 0) {
                     scanDirection *= -1; 
                 }
                 renderNode = Math.floor(autoScanNode);
             }
 
+            // Draw Bottom Bar
             for (let i = 0; i < nodesCount; i++) {
                 const hue = (i / nodesCount) * 360;
-                
                 if (renderNode !== null && Math.abs(renderNode - i) > 5) {
                     ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.1)`;
                 } else {
                     ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
                 }
-                
                 ctx.fillRect(nodePositions[i] - 1, baselineY, 2, 30);
             }
 
-            ctx.lineWidth = 0.5;
             let connectionCount = 0;
+            const activeArcs = [];
 
+            // Draw Lines
             for (let i = 0; i < arcs.length; i++) {
                 const arc = arcs[i];
                 const startX = nodePositions[arc.start];
                 const endX = nodePositions[arc.end];
-                const distance = Math.abs(startX - endX);
-                const controlY = baselineY - (distance * 0.9); 
+                const distanceX = Math.abs(startX - endX);
+                const controlY = baselineY - (distanceX * 0.9); 
                 const hue = (arc.start / nodesCount) * 360;
                 
-                let opacity = 0.15; 
+                let opacity = 0.1; 
+                let isConnected = false;
                 
                 if (renderNode !== null) {
-                    const isConnected = Math.abs(arc.start - renderNode) <= 5 || Math.abs(arc.end - renderNode) <= 5;
+                    isConnected = Math.abs(arc.start - renderNode) <= 5 || Math.abs(arc.end - renderNode) <= 5;
                     if (isConnected) {
-                        opacity = 0.9; 
-                        ctx.lineWidth = 1.5;
+                        opacity = 0.7; 
+                        ctx.lineWidth = 1.0;
                         connectionCount++;
+                        activeArcs.push(arc); // Save to spawn packets later
                     } else {
                         opacity = 0.02; 
                         ctx.lineWidth = 0.5;
@@ -200,7 +222,48 @@
                 ctx.stroke();
             }
 
-            // New: Draw the targeting crosshair ring
+            // Spawn new Data Packets randomly on active connections
+            if (activeArcs.length > 0 && Math.random() > 0.5 && packets.length < 50) {
+                const randomArc = activeArcs[Math.floor(Math.random() * activeArcs.length)];
+                packets.push({
+                    arc: randomArc,
+                    progress: 0,
+                    speed: 0.01 + (Math.random() * 0.015) // Speed of the dot
+                });
+            }
+
+            // Draw and move Data Packets
+            for (let i = packets.length - 1; i >= 0; i--) {
+                const pkt = packets[i];
+                pkt.progress += pkt.speed;
+
+                if (pkt.progress >= 1) {
+                    packets.splice(i, 1); // Remove packet when it reaches the end
+                    continue;
+                }
+
+                const startX = nodePositions[pkt.arc.start];
+                const endX = nodePositions[pkt.arc.end];
+                const controlY = baselineY - (Math.abs(startX - endX) * 0.9);
+
+                const p0 = { x: startX, y: baselineY };
+                const p1 = { x: startX, y: controlY }; // Control point 1
+                const p2 = { x: endX, y: controlY };   // Control point 2 (simulated quad curve)
+                const p3 = { x: endX, y: baselineY };  // End point
+
+                // Simplified bezier for packets
+                const pos = getBezierPoint(pkt.progress, p0, {x: (startX+endX)/2, y: controlY}, p3);
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00ffcc';
+                ctx.fill();
+                ctx.shadowBlur = 0; // reset
+            }
+
+            // Draw Targeting Crosshair
             if (renderNode !== null) {
                 const targetX = nodePositions[renderNode];
                 ctx.beginPath();
@@ -209,15 +272,13 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
-                // Update the HUD Matrix text
-                hudStatus.innerText = isInteracting ? 'STATUS: MANUAL OVERRIDE' : 'STATUS: AUTO-PILOT ACTIVE';
-                hudStatus.style.color = isInteracting ? '#ffcc00' : '#00ffcc';
+                // Update HUD
+                hudStatus.innerText = isInteracting ? 'MANUAL OVERRIDE' : 'AUTO-SCAN ACTIVE';
+                hudStatus.style.color = isInteracting ? '#ffaa00' : '#ffffff';
                 
-                hudSector.innerText = `SECTOR: ${renderNode.toString().padStart(3, '0')}`;
-                hudLinks.innerText  = `LINKS:  ${connectionCount.toString().padStart(3, '0')}`;
-                
-                const density = ((connectionCount / arcsCount) * 100).toFixed(2);
-                hudDensity.innerText = `DENSITY: ${density}%`;
+                hudSector.innerText = renderNode.toString().padStart(3, '0');
+                hudLinks.innerText  = connectionCount.toString().padStart(3, '0');
+                hudTraf.innerText = `${Math.floor(packets.length * 1.5)} PKT/S`;
             }
 
             requestAnimationFrame(drawFrame);
@@ -252,7 +313,8 @@
             idleTimer = setTimeout(() => {
                 isInteracting = false;
                 autoScanNode = activeNode || 0; 
-            }, 2500);
+                packets.length = 0; // Clear packets when switching back to auto
+            }, 2000);
         }
 
         canvas.addEventListener('mousedown', handleInteraction);
