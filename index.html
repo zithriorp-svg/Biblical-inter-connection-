@@ -12,22 +12,17 @@
             color: #ffffff;
             font-family: sans-serif;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            width: 100vw;
             height: 100vh;
             touch-action: none;
         }
         #canvas-container {
             width: 100%;
-            height: 100vh;
-            position: relative;
-        }
-        canvas {
-            display: block;
-            width: 100%;
             height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
         .header {
             position: absolute;
@@ -38,18 +33,17 @@
             pointer-events: none;
         }
         .title {
-            font-size: 20px;
+            font-size: 18px;
             letter-spacing: 5px;
             opacity: 0.9;
             margin-bottom: 8px;
             text-transform: uppercase;
         }
-        
         .hud-box {
             position: absolute;
             bottom: 60px; 
             left: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(5, 5, 5, 0.85);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 4px;
             padding: 12px;
@@ -77,7 +71,7 @@
     </div>
     
     <div class="hud-box" id="infoHud">
-        <div class="hud-row" id="hudStatus">STATUS: <span>DOWNLOADING DATA...</span></div>
+        <div class="hud-row" id="hudStatus">STATUS: <span>CONNECTING TO DATABASE...</span></div>
         <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
         <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
         <div class="hud-row" id="hudLinks">LINKS: <span>---</span></div>
@@ -91,6 +85,10 @@
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
         
+        // Setup an offscreen canvas to prevent mobile crashing
+        const bgCanvas = document.createElement('canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        
         const hudStatus = document.getElementById('hudStatus').querySelector('span');
         const hudBook = document.getElementById('hudBook').querySelector('span');
         const hudChap = document.getElementById('hudChap').querySelector('span');
@@ -98,7 +96,6 @@
 
         let width, height;
         
-        // The real structure of the 66 books of the Bible
         const books = [
             { id: "Gen", name: "Genesis", ch: 50 }, { id: "Exod", name: "Exodus", ch: 40 }, { id: "Lev", name: "Leviticus", ch: 27 },
             { id: "Num", name: "Numbers", ch: 36 }, { id: "Deut", name: "Deuteronomy", ch: 34 }, { id: "Josh", name: "Joshua", ch: 24 },
@@ -128,7 +125,6 @@
         const chapterNodes = []; 
         const bookMap = {};
 
-        // Calculate global timeline position for all 1,189 chapters
         books.forEach((book, bookIndex) => {
             bookMap[book.id] = { index: bookIndex, name: book.name, startCh: totalChapters };
             for(let i = 1; i <= book.ch; i++) {
@@ -138,28 +134,38 @@
         });
 
         const arcs = [];
+        const chapterArcs = Array.from({length: totalChapters}, () => []);
+        
         let renderProgress = 0;
         let activeChapterIndex = null;
+        let bgRenderComplete = false;
 
         function resize() {
-            width = canvas.parentElement.clientWidth;
-            height = canvas.parentElement.clientHeight;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            
             canvas.width = width;
             canvas.height = height;
-            if (arcs.length > 0) drawInstantly();
+            bgCanvas.width = width;
+            bgCanvas.height = height;
+            
+            if (arcs.length > 0) {
+                renderProgress = 0;
+                bgRenderComplete = false;
+                animateDrawing();
+            }
         }
 
         window.addEventListener('resize', resize);
 
-        // Fetch the REAL cross-reference dataset from OpenBible.info
         async function loadRealData() {
             try {
+                hudStatus.innerText = "DOWNLOADING DATASET...";
                 const response = await fetch('https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt');
                 const text = await response.text();
                 
                 const lines = text.split('\n');
-                
-                hudStatus.innerText = "PROCESSING DATA...";
+                hudStatus.innerText = "PARSING DATA...";
 
                 for (let i = 1; i < lines.length; i++) {
                     const parts = lines[i].split('\t');
@@ -173,15 +179,19 @@
                         if (b1 && b2) {
                             const c1 = b1.startCh + (parseInt(fromRef[1]) - 1);
                             const c2 = b2.startCh + (parseInt(toRef[1]) - 1);
-                            arcs.push({ start: c1, end: c2, book1: b1.index, book2: b2.index });
+                            
+                            if (c1 < totalChapters && c2 < totalChapters) {
+                                const arc = { start: c1, end: c2, book1: b1.index, book2: b2.index };
+                                arcs.push(arc);
+                                chapterArcs[c1].push(arc);
+                                chapterArcs[c2].push(arc);
+                            }
                         }
                     }
                 }
                 
-                hudStatus.innerText = "63,000+ CONNECTIONS LOADED";
+                hudStatus.innerText = `DRAWING ${arcs.length.toLocaleString()} CONNECTIONS...`;
                 hudStatus.style.color = "#00ffcc";
-                
-                // Start drawing the heavy dataset smoothly
                 animateDrawing();
 
             } catch (err) {
@@ -196,21 +206,24 @@
         }
 
         function animateDrawing() {
-            const baselineY = height - 40;
-            const batchSize = 500; // Draw 500 lines per frame so it doesn't freeze the phone
+            const baselineY = height - 80;
+            const batchSize = 1500; // Draw in safe batches to protect mobile GPU
             
-            ctx.clearRect(0, 0, width, height);
+            if (renderProgress === 0) {
+                bgCtx.fillStyle = '#050505';
+                bgCtx.fillRect(0, 0, width, height);
 
-            // Draw Bottom Bar (Chapters)
-            for (let i = 0; i < totalChapters; i++) {
-                const hue = (chapterNodes[i].bookIndex / books.length) * 360;
-                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                ctx.fillRect(getX(i) - 0.5, baselineY, 1.5, 15);
+                for (let i = 0; i < totalChapters; i++) {
+                    const hue = (chapterNodes[i].bookIndex / books.length) * 360;
+                    bgCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    bgCtx.fillRect(getX(i) - 0.5, baselineY, 1.5, 15);
+                }
+                bgCtx.lineWidth = 0.3; 
             }
-
-            ctx.lineWidth = 0.2;
             
             function drawBatch() {
+                if (activeChapterIndex !== null) return; // Pause background drawing if user is touching
+                
                 const limit = Math.min(renderProgress + batchSize, arcs.length);
                 
                 for (let i = renderProgress; i < limit; i++) {
@@ -221,84 +234,92 @@
                     const controlY = baselineY - (distance * 0.9); 
                     const hue = (arc.book1 / books.length) * 360;
                     
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.03)`; // Extremely low opacity for density effect
-                    ctx.beginPath();
-                    ctx.moveTo(startX, baselineY);
-                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
-                    ctx.stroke();
+                    bgCtx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.04)`; 
+                    bgCtx.beginPath();
+                    bgCtx.moveTo(startX, baselineY);
+                    bgCtx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                    bgCtx.stroke();
                 }
                 
                 renderProgress = limit;
+                
+                // Copy safe background buffer to actual screen
+                ctx.clearRect(0, 0, width, height);
+                ctx.drawImage(bgCanvas, 0, 0);
+                
                 if (renderProgress < arcs.length) {
                     requestAnimationFrame(drawBatch);
+                } else {
+                    bgRenderComplete = true;
+                    hudStatus.innerText = "SYSTEM READY: TAP RAINBOW BAR";
+                    hudStatus.style.color = "#00ffcc";
                 }
             }
+            
             drawBatch();
         }
 
         function drawInstantly() {
-            const baselineY = height - 40;
+            const baselineY = height - 80;
             ctx.clearRect(0, 0, width, height);
 
-            for (let i = 0; i < totalChapters; i++) {
-                const hue = (chapterNodes[i].bookIndex / books.length) * 360;
-                if (activeChapterIndex !== null && i !== activeChapterIndex) {
-                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
-                } else {
-                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                }
-                ctx.fillRect(getX(i) - 0.5, baselineY, 1.5, 15);
-            }
+            if (activeChapterIndex !== null) {
+                // Dim the background
+                ctx.globalAlpha = 0.15;
+                ctx.drawImage(bgCanvas, 0, 0);
+                ctx.globalAlpha = 1.0;
 
-            let isolatedLinks = 0;
+                const activeLinks = chapterArcs[activeChapterIndex] || [];
+                ctx.lineWidth = 1.0;
 
-            for (let i = 0; i < arcs.length; i++) {
-                const arc = arcs[i];
-                const startX = getX(arc.start);
-                const endX = getX(arc.end);
-                const distance = Math.abs(startX - endX);
-                const controlY = baselineY - (distance * 0.9); 
-                const hue = (arc.book1 / books.length) * 360;
-                
-                if (activeChapterIndex !== null) {
-                    if (arc.start === activeChapterIndex || arc.end === activeChapterIndex) {
-                        ctx.lineWidth = 1.0;
-                        ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.5)`;
-                        isolatedLinks++;
-                        ctx.beginPath();
-                        ctx.moveTo(startX, baselineY);
-                        ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
-                        ctx.stroke();
-                    }
-                } else {
-                    ctx.lineWidth = 0.2;
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.03)`;
+                // Draw ONLY the active lines so the phone stays perfectly smooth
+                for (let i = 0; i < activeLinks.length; i++) {
+                    const arc = activeLinks[i];
+                    const startX = getX(arc.start);
+                    const endX = getX(arc.end);
+                    const distance = Math.abs(startX - endX);
+                    const controlY = baselineY - (distance * 0.9); 
+                    const hue = (arc.book1 / books.length) * 360;
+                    
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.8)`;
                     ctx.beginPath();
                     ctx.moveTo(startX, baselineY);
                     ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
                     ctx.stroke();
                 }
-            }
 
-            if (activeChapterIndex !== null) {
+                // Highlight bottom bar and touch point
+                for (let i = 0; i < totalChapters; i++) {
+                    const hue = (chapterNodes[i].bookIndex / books.length) * 360;
+                    ctx.fillStyle = (i === activeChapterIndex) ? `hsl(${hue}, 100%, 60%)` : `hsla(${hue}, 100%, 50%, 0.1)`;
+                    ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 1.5, 15);
+                }
+
                 const targetX = getX(activeChapterIndex);
                 ctx.beginPath();
-                ctx.arc(targetX, baselineY, 5, 0, Math.PI * 2);
+                ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
                 ctx.fillStyle = '#ffffff';
                 ctx.fill();
                 
                 const node = chapterNodes[activeChapterIndex];
                 hudBook.innerText = node.bookName;
                 hudChap.innerText = node.localCh;
-                hudLinks.innerText = isolatedLinks;
+                hudLinks.innerText = activeLinks.length;
             } else {
+                // Restore background when finger is lifted
+                ctx.drawImage(bgCanvas, 0, 0);
                 hudBook.innerText = "---";
                 hudChap.innerText = "---";
                 hudLinks.innerText = "---";
+                
+                if (!bgRenderComplete) {
+                    animateDrawing(); // Resume drawing if it wasn't finished
+                }
             }
         }
 
         function handleInteraction(event) {
+            if (arcs.length === 0) return;
             const rect = canvas.getBoundingClientRect();
             let clientX = event.touches && event.touches.length > 0 ? event.touches[0].clientX : event.clientX;
             const margin = 20;
@@ -321,6 +342,7 @@
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
         canvas.addEventListener('mouseup', resetInteraction);
         canvas.addEventListener('mouseleave', resetInteraction);
+        
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
         canvas.addEventListener('touchend', resetInteraction);
