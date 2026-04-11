@@ -71,7 +71,7 @@
     </div>
     
     <div class="hud-box" id="infoHud">
-        <div class="hud-row" id="hudStatus">STATUS: <span>CONNECTING TO DATABASE...</span></div>
+        <div class="hud-row" id="hudStatus">STATUS: <span>CONNECTING...</span></div>
         <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
         <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
         <div class="hud-row" id="hudLinks">LINKS: <span>---</span></div>
@@ -84,10 +84,6 @@
     <script>
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
-        
-        // Setup an offscreen canvas to prevent mobile crashing
-        const bgCanvas = document.createElement('canvas');
-        const bgCtx = bgCanvas.getContext('2d');
         
         const hudStatus = document.getElementById('hudStatus').querySelector('span');
         const hudBook = document.getElementById('hudBook').querySelector('span');
@@ -135,25 +131,14 @@
 
         const arcs = [];
         const chapterArcs = Array.from({length: totalChapters}, () => []);
-        
-        let renderProgress = 0;
         let activeChapterIndex = null;
-        let bgRenderComplete = false;
 
         function resize() {
             width = window.innerWidth;
             height = window.innerHeight;
-            
             canvas.width = width;
             canvas.height = height;
-            bgCanvas.width = width;
-            bgCanvas.height = height;
-            
-            if (arcs.length > 0) {
-                renderProgress = 0;
-                bgRenderComplete = false;
-                animateDrawing();
-            }
+            if (arcs.length > 0) drawInstantly();
         }
 
         window.addEventListener('resize', resize);
@@ -165,7 +150,9 @@
                 const text = await response.text();
                 
                 const lines = text.split('\n');
-                hudStatus.innerText = "PARSING DATA...";
+                hudStatus.innerText = "OPTIMIZING DATA...";
+
+                const uniqueLinks = new Set();
 
                 for (let i = 1; i < lines.length; i++) {
                     const parts = lines[i].split('\t');
@@ -180,19 +167,25 @@
                             const c1 = b1.startCh + (parseInt(fromRef[1]) - 1);
                             const c2 = b2.startCh + (parseInt(toRef[1]) - 1);
                             
-                            if (c1 < totalChapters && c2 < totalChapters) {
-                                const arc = { start: c1, end: c2, book1: b1.index, book2: b2.index };
-                                arcs.push(arc);
-                                chapterArcs[c1].push(arc);
-                                chapterArcs[c2].push(arc);
+                            if (c1 !== c2 && c1 < totalChapters && c2 < totalChapters) {
+                                const linkKey = c1 < c2 ? `${c1}-${c2}` : `${c2}-${c1}`;
+                                
+                                if (!uniqueLinks.has(linkKey)) {
+                                    uniqueLinks.add(linkKey);
+                                    const arc = { start: c1, end: c2, book1: b1.index, book2: b2.index };
+                                    arcs.push(arc);
+                                    chapterArcs[c1].push(arc);
+                                    chapterArcs[c2].push(arc);
+                                }
                             }
                         }
                     }
                 }
                 
-                hudStatus.innerText = `DRAWING ${arcs.length.toLocaleString()} CONNECTIONS...`;
+                hudStatus.innerText = "SYSTEM READY: TAP RAINBOW BAR";
                 hudStatus.style.color = "#00ffcc";
-                animateDrawing();
+                
+                drawInstantly();
 
             } catch (err) {
                 hudStatus.innerText = "ERROR LOADING DATA";
@@ -205,28 +198,23 @@
             return margin + (index / (totalChapters - 1)) * (width - margin * 2);
         }
 
-        function animateDrawing() {
+        function drawInstantly() {
             const baselineY = height - 80;
-            const batchSize = 1500; // Draw in safe batches to protect mobile GPU
-            
-            if (renderProgress === 0) {
-                bgCtx.fillStyle = '#050505';
-                bgCtx.fillRect(0, 0, width, height);
+            ctx.clearRect(0, 0, width, height);
 
-                for (let i = 0; i < totalChapters; i++) {
-                    const hue = (chapterNodes[i].bookIndex / books.length) * 360;
-                    bgCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                    bgCtx.fillRect(getX(i) - 0.5, baselineY, 1.5, 15);
+            for (let i = 0; i < totalChapters; i++) {
+                const hue = (chapterNodes[i].bookIndex / books.length) * 360;
+                if (activeChapterIndex !== null && i !== activeChapterIndex) {
+                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
+                } else {
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
                 }
-                bgCtx.lineWidth = 0.3; 
+                ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 1.5, 15);
             }
-            
-            function drawBatch() {
-                if (activeChapterIndex !== null) return; // Pause background drawing if user is touching
-                
-                const limit = Math.min(renderProgress + batchSize, arcs.length);
-                
-                for (let i = renderProgress; i < limit; i++) {
+
+            if (activeChapterIndex === null) {
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i < arcs.length; i++) {
                     const arc = arcs[i];
                     const startX = getX(arc.start);
                     const endX = getX(arc.end);
@@ -234,45 +222,21 @@
                     const controlY = baselineY - (distance * 0.9); 
                     const hue = (arc.book1 / books.length) * 360;
                     
-                    bgCtx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.04)`; 
-                    bgCtx.beginPath();
-                    bgCtx.moveTo(startX, baselineY);
-                    bgCtx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
-                    bgCtx.stroke();
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.15)`; 
+                    ctx.beginPath();
+                    ctx.moveTo(startX, baselineY);
+                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                    ctx.stroke();
                 }
                 
-                renderProgress = limit;
-                
-                // Copy safe background buffer to actual screen
-                ctx.clearRect(0, 0, width, height);
-                ctx.drawImage(bgCanvas, 0, 0);
-                
-                if (renderProgress < arcs.length) {
-                    requestAnimationFrame(drawBatch);
-                } else {
-                    bgRenderComplete = true;
-                    hudStatus.innerText = "SYSTEM READY: TAP RAINBOW BAR";
-                    hudStatus.style.color = "#00ffcc";
-                }
-            }
-            
-            drawBatch();
-        }
-
-        function drawInstantly() {
-            const baselineY = height - 80;
-            ctx.clearRect(0, 0, width, height);
-
-            if (activeChapterIndex !== null) {
-                // Dim the background
-                ctx.globalAlpha = 0.15;
-                ctx.drawImage(bgCanvas, 0, 0);
-                ctx.globalAlpha = 1.0;
-
+                hudBook.innerText = "---";
+                hudChap.innerText = "---";
+                hudLinks.innerText = "---";
+            } 
+            else {
                 const activeLinks = chapterArcs[activeChapterIndex] || [];
-                ctx.lineWidth = 1.0;
+                ctx.lineWidth = 1.2;
 
-                // Draw ONLY the active lines so the phone stays perfectly smooth
                 for (let i = 0; i < activeLinks.length; i++) {
                     const arc = activeLinks[i];
                     const startX = getX(arc.start);
@@ -288,13 +252,6 @@
                     ctx.stroke();
                 }
 
-                // Highlight bottom bar and touch point
-                for (let i = 0; i < totalChapters; i++) {
-                    const hue = (chapterNodes[i].bookIndex / books.length) * 360;
-                    ctx.fillStyle = (i === activeChapterIndex) ? `hsl(${hue}, 100%, 60%)` : `hsla(${hue}, 100%, 50%, 0.1)`;
-                    ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 1.5, 15);
-                }
-
                 const targetX = getX(activeChapterIndex);
                 ctx.beginPath();
                 ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
@@ -305,16 +262,6 @@
                 hudBook.innerText = node.bookName;
                 hudChap.innerText = node.localCh;
                 hudLinks.innerText = activeLinks.length;
-            } else {
-                // Restore background when finger is lifted
-                ctx.drawImage(bgCanvas, 0, 0);
-                hudBook.innerText = "---";
-                hudChap.innerText = "---";
-                hudLinks.innerText = "---";
-                
-                if (!bgRenderComplete) {
-                    animateDrawing(); // Resume drawing if it wasn't finished
-                }
             }
         }
 
