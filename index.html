@@ -63,21 +63,31 @@
         .hud-row { margin-bottom: 4px; }
         .hud-row span { color: #ffffff; font-weight: bold; }
         
-        /* UPDATED: Scrollable Targets Box */
         .hud-targets { 
             margin-top: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: auto; 
-            max-height: 200px; /* Prevents it from breaking the screen */
-            overflow-y: auto; /* Adds a scrollbar when expanded */
+            max-height: 200px; overflow-y: auto; padding-right: 4px;
         }
-        /* Custom sleek scrollbar */
         .hud-targets::-webkit-scrollbar { width: 4px; }
         .hud-targets::-webkit-scrollbar-thumb { background: rgba(0, 255, 204, 0.5); border-radius: 4px; }
         
         .target-item {
-            padding: 5px 8px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;
+            padding: 6px 8px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;
             font-weight: bold; border-left: 3px solid transparent; border-radius: 2px;
         }
         .target-item:active { opacity: 0.5; }
+
+        /* The New Highly-Tappable Toggle Button */
+        .toggle-btn {
+            background: rgba(0, 255, 204, 0.1); border: 1px dashed rgba(0, 255, 204, 0.4);
+            color: #00ffcc; text-align: center; padding: 8px; margin-top: 5px;
+            font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s;
+            pointer-events: auto; /* Guarantees it intercepts your tap */
+        }
+        .toggle-btn:active { background: rgba(0, 255, 204, 0.3); }
+        .toggle-btn.collapse {
+            color: #ff3333; border-color: rgba(255,51,51,0.4); background: rgba(255,51,51,0.1);
+        }
+        .toggle-btn.collapse:active { background: rgba(255,51,51,0.3); }
 
         .overlay-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -125,7 +135,7 @@
         </div>
         <div id="reader-text">
             <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;" id="boot-status">
-                > BOOTING DATABASE ENGINE...
+                > BOOTING OFFLINE ENGINE...
             </div>
         </div>
     </div>
@@ -202,8 +212,7 @@
         let streamTimer = null;
         let bibleDB = null; 
         
-        // NEW: State tracking for expanded target list
-        let isHudExpanded = false;
+        let isHudExpanded = false; // State for the toggle button
 
         async function mountDatabases() {
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
@@ -300,7 +309,7 @@
         }
 
         window.jumpToChapter = function(targetIndex) {
-            isHudExpanded = false; // Reset the expanded list when jumping
+            isHudExpanded = false; 
             activeChapterIndex = targetIndex;
             drawInteractiveState();
             
@@ -314,10 +323,17 @@
             }, 100); 
         };
 
-        // NEW: Function to toggle the expanded list
+        // NEW: The robust trigger function
         window.toggleHudExpanded = function() {
             isHudExpanded = !isHudExpanded;
             drawInteractiveState();
+            
+            // Auto scroll to the bottom of the list when expanding
+            if (isHudExpanded) {
+                setTimeout(() => {
+                    hudTargets.scrollTop = hudTargets.scrollHeight;
+                }, 50);
+            }
         };
 
         function drawInteractiveState() {
@@ -419,7 +435,6 @@
                     ctx.fillStyle = '#ffffff';
                     ctx.fill();
 
-                    // Check if we should display this item based on expansion state
                     if (displayedTargets < 5 || isHudExpanded) {
                         targetListHTML += `
                             <div class="target-item" 
@@ -441,12 +456,12 @@
                 hudBook.innerText = `${originNode.bName} ${originNode.ch}`;
                 hudLinks.innerText = `${activeLinks.length} DETECTED`;
                 
-                // Add the Expand/Collapse toggle button if there are more than 5
+                // Add the prominent toggle button
                 if (activeLinks.length > 5) {
                     if (!isHudExpanded) {
-                        targetListHTML += `<div style="color:#00ffcc; font-size:11px; margin-top:5px; font-weight:bold; cursor:pointer; padding:4px 0;" onclick="toggleHudExpanded()">+ ${activeLinks.length - 5} additional nodes (TAP TO EXPAND)</div>`;
+                        targetListHTML += `<div class="toggle-btn" onclick="toggleHudExpanded()">+ ${activeLinks.length - 5} MORE (TAP TO EXPAND)</div>`;
                     } else {
-                        targetListHTML += `<div style="color:#ff3333; font-size:11px; margin-top:5px; font-weight:bold; cursor:pointer; padding:4px 0;" onclick="toggleHudExpanded()">- COLLAPSE LIST</div>`;
+                        targetListHTML += `<div class="toggle-btn collapse" onclick="toggleHudExpanded()">- COLLAPSE LIST</div>`;
                     }
                 }
                 
@@ -520,15 +535,13 @@
             const margin = 10;
             let percentage = (clientX - rect.left - margin) / (width - margin * 2);
             
-            // Determine the new index being swiped to
             let newIndex = null;
             if (percentage >= 0 && percentage <= 1) {
                 newIndex = Math.min(totalChapters - 1, Math.floor(percentage * totalChapters));
             }
 
-            // Only process if the chapter actually changed
             if (newIndex !== activeChapterIndex && newIndex !== null) {
-                isHudExpanded = false; // Reset the expanded list if you swipe to a new chapter
+                isHudExpanded = false; 
                 activeChapterIndex = newIndex;
                 
                 drawInteractiveState();
@@ -557,3 +570,4 @@
     </script>
 </body>
 </html>
+
