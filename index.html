@@ -20,7 +20,17 @@
             font-size: 20px; letter-spacing: 3px; color: #00ffcc; margin-bottom: 15px;
             text-transform: uppercase; position: sticky; top: 0; background: rgba(10,10,10,0.95);
             padding-bottom: 10px; z-index: 5;
+            display: flex; align-items: center;
         }
+        /* New Clickable Header Style */
+        #reader-title {
+            cursor: pointer; padding: 5px 10px; border-radius: 4px;
+            background: rgba(0, 255, 204, 0.05); border: 1px solid rgba(0, 255, 204, 0.2);
+            transition: all 0.2s ease; display: inline-block;
+        }
+        #reader-title:active { background: rgba(0, 255, 204, 0.2); }
+        .dropdown-icon { font-size: 14px; margin-left: 8px; vertical-align: middle; color: #aaaaaa; }
+
         .verse-block {
             margin-bottom: 12px; line-height: 1.6; font-size: 16px; color: #dddddd;
             cursor: pointer; padding: 8px; border-radius: 4px; transition: background 0.2s;
@@ -41,14 +51,10 @@
 
         .hud-box {
             position: absolute; bottom: 110px; left: 10px;
-            background-color: rgba(5, 10, 8, 0.95);
-            border: 1px solid rgba(0, 255, 204, 0.5);
-            border-radius: 6px; padding: 15px;
-            font-family: monospace; font-size: 11px; color: #aaaaaa;
-            pointer-events: none; z-index: 20;
-            display: flex; flex-direction: column;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
-            transition: opacity 0.3s ease;
+            background-color: rgba(5, 10, 8, 0.95); border: 1px solid rgba(0, 255, 204, 0.5);
+            border-radius: 6px; padding: 15px; font-family: monospace; font-size: 11px; color: #aaaaaa;
+            pointer-events: none; z-index: 20; display: flex; flex-direction: column;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1); transition: opacity 0.3s ease;
         }
         .hud-title {
             color: #00ffcc; font-size: 12px; letter-spacing: 2px;
@@ -56,56 +62,64 @@
         }
         .hud-row { margin-bottom: 4px; }
         .hud-row span { color: #ffffff; font-weight: bold; }
-        .hud-targets {
-            margin-top: 10px;
-            display: flex; flex-direction: column; gap: 5px;
-            /* Allow clicks to pass through the HUD box to the buttons */
-            pointer-events: auto; 
-        }
+        .hud-targets { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: auto; }
         .target-item {
-            background: rgba(255,255,255,0.05); padding: 5px 8px;
-            border-left: 2px solid #00ffcc; color: #ddd; white-space: nowrap;
-            cursor: pointer; /* Makes it look clickable */
-            transition: background 0.2s ease;
+            background: rgba(255,255,255,0.05); padding: 5px 8px; border-left: 2px solid #00ffcc;
+            color: #ddd; white-space: nowrap; cursor: pointer; transition: background 0.2s ease;
         }
-        /* Highlight when tapped */
-        .target-item:active {
-            background: rgba(0, 255, 204, 0.3);
-            color: #ffffff;
-        }
+        .target-item:active { background: rgba(0, 255, 204, 0.3); color: #ffffff; }
 
-        #ai-overlay {
+        /* General Overlay Styles */
+        .overlay-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 10, 5, 0.95); z-index: 100; display: none;
-            flex-direction: column; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px);
+            background-color: rgba(0, 10, 5, 0.98); z-index: 100; display: none;
+            flex-direction: column; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px);
         }
-        .ai-header {
+        .overlay-header {
             color: #00ffcc; font-size: 20px; letter-spacing: 2px; margin-bottom: 10px;
             border-bottom: 1px solid #00ffcc; padding-bottom: 10px;
         }
-        .ai-content { flex: 1; overflow-y: auto; color: #ffffff; font-size: 14px; line-height: 1.5; }
-        .ai-link { background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 10px; border-left: 3px solid #00ffcc; }
-        .ai-link-ref { color: #00ffcc; font-weight: bold; margin-bottom: 5px;}
+        .overlay-content { flex: 1; overflow-y: auto; color: #ffffff; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; }
         .close-btn {
             background-color: #00ffcc; color: #000; text-align: center; padding: 15px;
-            font-weight: bold; border-radius: 4px; margin-top: 10px; text-transform: uppercase;
+            font-weight: bold; border-radius: 4px; margin-top: 10px; text-transform: uppercase; cursor: pointer;
         }
+        .close-btn:active { background-color: #00ccaa; }
+
+        /* AI Overlay Specifics */
+        .ai-link { background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 10px; border-left: 3px solid #00ffcc; }
+        .ai-link-ref { color: #00ffcc; font-weight: bold; margin-bottom: 5px;}
+
+        /* Navigation Overlay Specifics */
+        .nav-item {
+            background: rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; 
+            text-align: center; cursor: pointer; font-family: monospace; font-size: 14px;
+        }
+        .nav-item:active { background: rgba(0,255,204,0.3); color: #fff; }
     </style>
 </head>
 <body>
 
-    <div id="ai-overlay">
-        <div class="ai-header" id="ai-title">AI ANALYSIS</div>
-        <div class="ai-content" id="ai-results">Loading deep network connections...</div>
+    <div id="nav-overlay" class="overlay-screen">
+        <div class="overlay-header">DIRECTORY ACCESS</div>
+        <div class="overlay-content" id="nav-content"></div>
+        <div class="close-btn" onclick="closeNav()">CANCEL</div>
+    </div>
+
+    <div id="ai-overlay" class="overlay-screen">
+        <div class="overlay-header" id="ai-title">AI ANALYSIS</div>
+        <div class="overlay-content" id="ai-results">Loading deep network connections...</div>
         <div class="close-btn" onclick="closeAI()">CLOSE SYSTEM</div>
     </div>
 
     <div id="reader-container">
-        <div class="reader-header" id="reader-title">SYSTEM READY</div>
+        <div class="reader-header">
+            <div id="reader-title" onclick="openNav()">SYSTEM READY <span class="dropdown-icon">▼</span></div>
+        </div>
         <div id="reader-text">
             <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;">
                 > OFFLINE NETWORK GENERATED.<br>
-                > SWIPE THE BOTTOM TIMELINE TO SCAN CONNECTIONS.
+                > TAP THE HEADER MENU OR SWIPE TIMELINE TO BEGIN.
             </div>
         </div>
     </div>
@@ -137,6 +151,9 @@
         const aiOverlay = document.getElementById('ai-overlay');
         const aiTitle = document.getElementById('ai-title');
         const aiResults = document.getElementById('ai-results');
+
+        const navOverlay = document.getElementById('nav-overlay');
+        const navContent = document.getElementById('nav-content');
 
         const books = [
             { n: "Genesis", c: 50 }, { n: "Exodus", c: 40 }, { n: "Leviticus", c: 27 }, { n: "Numbers", c: 36 }, { n: "Deuteronomy", c: 34 },
@@ -192,25 +209,75 @@
             return margin + (index / (totalChapters - 1)) * (width - margin * 2);
         }
 
-        // --- NEW JUMP COMMAND ---
-        // This is called when you tap a link inside the network details box
+        // --- NEW DIRECTORY MENU LOGIC ---
+        function openNav() {
+            navOverlay.style.display = 'flex';
+            renderTestament('OT');
+        }
+
+        function closeNav() {
+            navOverlay.style.display = 'none';
+        }
+
+        function renderTestament(test) {
+            const isOT = test === 'OT';
+            const startIdx = isOT ? 0 : 39;
+            const endIdx = isOT ? 39 : 66;
+
+            let html = `
+                <div style="display:flex; margin-bottom: 15px; border-bottom: 1px solid #333;">
+                    <div onclick="renderTestament('OT')" style="flex:1; padding:10px; text-align:center; cursor:pointer; color:${isOT?'#00ffcc':'#666'}; border-bottom:${isOT?'2px solid #00ffcc':'none'};">OLD TESTAMENT</div>
+                    <div onclick="renderTestament('NT')" style="flex:1; padding:10px; text-align:center; cursor:pointer; color:${!isOT?'#00ffcc':'#666'}; border-bottom:${!isOT?'2px solid #00ffcc':'none'};">NEW TESTAMENT</div>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 8px; overflow-y:auto; flex:1; align-content: start;">
+            `;
+            for(let i=startIdx; i<endIdx; i++) {
+                html += `<div class="nav-item" onclick="renderChapters(${i})">${books[i].n}</div>`;
+            }
+            html += `</div>`;
+            navContent.innerHTML = html;
+        }
+
+        function renderChapters(bookIndex) {
+            const b = books[bookIndex];
+            const returnTestament = bookIndex < 39 ? "'OT'" : "'NT'";
+            
+            let html = `
+                <div style="margin-bottom: 15px; color:#00ffcc; text-align:center; font-size: 16px; font-weight:bold; letter-spacing: 2px;">
+                    ${b.n.toUpperCase()} 
+                    <span style="color:#666; font-size:12px; cursor:pointer; margin-left: 10px;" onclick="renderTestament(${returnTestament})">[ BACK ]</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 8px; overflow-y:auto; flex:1; align-content: start;">
+            `;
+            for(let c=1; c<=b.c; c++) {
+                html += `<div class="nav-item" onclick="executeJump(${bookIndex}, ${c})">${c}</div>`;
+            }
+            html += `</div>`;
+            navContent.innerHTML = html;
+        }
+
+        function executeJump(bookIndex, chapterNum) {
+            const targetGlobalIndex = chapterNodes.findIndex(n => n.bIndex === bookIndex && n.ch === chapterNum);
+            closeNav();
+            if (targetGlobalIndex !== -1) jumpToChapter(targetGlobalIndex);
+        }
+
         window.jumpToChapter = function(targetIndex) {
             activeChapterIndex = targetIndex;
             drawInteractiveState();
             
             clearTimeout(streamTimer);
             const node = chapterNodes[activeChapterIndex];
-            readerTitle.innerText = `${node.bName} ${node.ch}`;
+            readerTitle.innerHTML = `${node.bName} ${node.ch} <span class="dropdown-icon">▼</span>`;
             readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> JUMPING TO COORDINATES...</div>`;
             
             streamTimer = setTimeout(() => {
                 loadChapterText(node.bName, node.ch);
-            }, 300); // Loads slightly faster on jump
+            }, 300); 
         };
 
         function drawInteractiveState() {
             ctx.clearRect(0, 0, width, height);
-            
             const baselineY = height - 90; 
 
             for (let i = 0; i < totalChapters; i++) {
@@ -242,7 +309,6 @@
 
             if (activeChapterIndex === null) {
                 infoHud.style.opacity = "0"; 
-                // Disable clicking on the invisible box
                 infoHud.style.pointerEvents = "none";
                 ctx.lineWidth = 0.5;
                 ctx.globalCompositeOperation = 'lighter';
@@ -293,14 +359,12 @@
                     ctx.fill();
 
                     if (displayedTargets < 5) {
-                        // Added the onclick command here so they trigger the Jump
                         targetListHTML += `<div class="target-item" onclick="jumpToChapter(${targetIdx})">> ${targetNode.bName} ${targetNode.ch}</div>`;
                         displayedTargets++;
                     }
                 }
 
                 infoHud.style.opacity = "1";
-                // Allow the HUD to be clickable now that it's visible
                 infoHud.style.pointerEvents = "auto";
                 
                 const originNode = chapterNodes[activeChapterIndex];
@@ -392,7 +456,7 @@
                 clearTimeout(streamTimer);
 
                 const node = chapterNodes[activeChapterIndex];
-                readerTitle.innerText = `${node.bName} ${node.ch}`;
+                readerTitle.innerHTML = `${node.bName} ${node.ch} <span class="dropdown-icon">▼</span>`;
                 readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> LOCKING COORDINATES...</div>`;
                 
                 streamTimer = setTimeout(() => {
