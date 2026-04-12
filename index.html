@@ -8,14 +8,13 @@
         body {
             margin: 0; padding: 0; background-color: #050505; color: #ffffff;
             font-family: sans-serif; overflow: hidden; 
-            /* Strict boundary lock to fit mobile screens perfectly */
             position: absolute; top: 0; bottom: 0; left: 0; right: 0;
             display: flex; flex-direction: column;
         }
         #reader-container {
             flex: 5; width: 100%; background-color: #0a0a0a; border-bottom: 2px solid #00ffcc;
             overflow-y: auto; padding: 20px; box-sizing: border-box; position: relative;
-            min-height: 0; /* CRITICAL FIX: Prevents long text from stretching the screen */
+            min-height: 0; 
         }
         .reader-header {
             font-size: 20px; letter-spacing: 3px; color: #00ffcc; margin-bottom: 15px;
@@ -31,7 +30,7 @@
 
         #viz-container {
             flex: 5; width: 100%; position: relative; background-color: #050505; touch-action: none;
-            min-height: 0; /* CRITICAL FIX: Keeps the visualizer locked in place */
+            min-height: 0; 
         }
         canvas { display: block; width: 100%; height: 100%; }
         
@@ -60,10 +59,19 @@
         .hud-targets {
             margin-top: 10px;
             display: flex; flex-direction: column; gap: 5px;
+            /* Allow clicks to pass through the HUD box to the buttons */
+            pointer-events: auto; 
         }
         .target-item {
             background: rgba(255,255,255,0.05); padding: 5px 8px;
             border-left: 2px solid #00ffcc; color: #ddd; white-space: nowrap;
+            cursor: pointer; /* Makes it look clickable */
+            transition: background 0.2s ease;
+        }
+        /* Highlight when tapped */
+        .target-item:active {
+            background: rgba(0, 255, 204, 0.3);
+            color: #ffffff;
         }
 
         #ai-overlay {
@@ -184,6 +192,22 @@
             return margin + (index / (totalChapters - 1)) * (width - margin * 2);
         }
 
+        // --- NEW JUMP COMMAND ---
+        // This is called when you tap a link inside the network details box
+        window.jumpToChapter = function(targetIndex) {
+            activeChapterIndex = targetIndex;
+            drawInteractiveState();
+            
+            clearTimeout(streamTimer);
+            const node = chapterNodes[activeChapterIndex];
+            readerTitle.innerText = `${node.bName} ${node.ch}`;
+            readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> JUMPING TO COORDINATES...</div>`;
+            
+            streamTimer = setTimeout(() => {
+                loadChapterText(node.bName, node.ch);
+            }, 300); // Loads slightly faster on jump
+        };
+
         function drawInteractiveState() {
             ctx.clearRect(0, 0, width, height);
             
@@ -218,6 +242,8 @@
 
             if (activeChapterIndex === null) {
                 infoHud.style.opacity = "0"; 
+                // Disable clicking on the invisible box
+                infoHud.style.pointerEvents = "none";
                 ctx.lineWidth = 0.5;
                 ctx.globalCompositeOperation = 'lighter';
                 
@@ -267,12 +293,16 @@
                     ctx.fill();
 
                     if (displayedTargets < 5) {
-                        targetListHTML += `<div class="target-item">> ${targetNode.bName} ${targetNode.ch}</div>`;
+                        // Added the onclick command here so they trigger the Jump
+                        targetListHTML += `<div class="target-item" onclick="jumpToChapter(${targetIdx})">> ${targetNode.bName} ${targetNode.ch}</div>`;
                         displayedTargets++;
                     }
                 }
 
                 infoHud.style.opacity = "1";
+                // Allow the HUD to be clickable now that it's visible
+                infoHud.style.pointerEvents = "auto";
+                
                 const originNode = chapterNodes[activeChapterIndex];
                 hudBook.innerText = `${originNode.bName} ${originNode.ch}`;
                 hudLinks.innerText = `${activeLinks.length} DETECTED`;
@@ -380,4 +410,3 @@
     </script>
 </body>
 </html>
-
