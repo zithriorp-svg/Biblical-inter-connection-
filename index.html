@@ -247,50 +247,64 @@
         }
         window.addEventListener('resize', resize);
 
-        // The core data processor
+        // The safe data processor that prevents the phone from freezing
         function parseData(text) {
             const lines = text.split('\n');
-            loadingText.innerText = "DATA RECEIVED. OPTIMIZING NETWORK...";
             const uniqueLinks = new Set();
+            let parseIndex = 1;
+            const parseBatchSize = 1000; // Only process 1000 items at a time
 
-            for (let i = 1; i < lines.length; i++) {
-                const parts = lines[i].split('\t');
-                if (parts.length >= 2) {
-                    const fromRef = parts[0];
-                    const toRef = parts[1];
-                    const fromSplit = fromRef.split('.');
-                    const toSplit = toRef.split('.');
-                    
-                    const b1 = bookMap[fromSplit[0]];
-                    const b2 = bookMap[toSplit[0]];
-                    
-                    if (b1 && b2) {
-                        const c1 = b1.startCh + (parseInt(fromSplit[1]) - 1);
-                        const c2 = b2.startCh + (parseInt(toSplit[1]) - 1);
+            function parseBatch() {
+                const limit = Math.min(parseIndex + parseBatchSize, lines.length);
+                
+                for (let i = parseIndex; i < limit; i++) {
+                    const parts = lines[i].split('\t');
+                    if (parts.length >= 2) {
+                        const fromRef = parts[0];
+                        const toRef = parts[1];
+                        const fromSplit = fromRef.split('.');
+                        const toSplit = toRef.split('.');
                         
-                        rawConnections.push({ from: fromRef, to: toRef });
+                        const b1 = bookMap[fromSplit[0]];
+                        const b2 = bookMap[toSplit[0]];
+                        
+                        if (b1 && b2) {
+                            const c1 = b1.startCh + (parseInt(fromSplit[1]) - 1);
+                            const c2 = b2.startCh + (parseInt(toSplit[1]) - 1);
+                            
+                            rawConnections.push({ from: fromRef, to: toRef });
 
-                        if (c1 !== c2 && c1 < totalChapters && c2 < totalChapters) {
-                            const linkKey = c1 < c2 ? `${c1}-${c2}` : `${c2}-${c1}`;
-                            if (!uniqueLinks.has(linkKey)) {
-                                uniqueLinks.add(linkKey);
-                                const arc = { start: c1, end: c2, book1: b1.index };
-                                arcs.push(arc);
-                                chapterArcs[c1].push(arc);
-                                chapterArcs[c2].push(arc);
+                            if (c1 !== c2 && c1 < totalChapters && c2 < totalChapters) {
+                                const linkKey = c1 < c2 ? `${c1}-${c2}` : `${c2}-${c1}`;
+                                if (!uniqueLinks.has(linkKey)) {
+                                    uniqueLinks.add(linkKey);
+                                    const arc = { start: c1, end: c2, book1: b1.index };
+                                    arcs.push(arc);
+                                    chapterArcs[c1].push(arc);
+                                    chapterArcs[c2].push(arc);
+                                }
                             }
                         }
                     }
                 }
+                
+                parseIndex = limit;
+                
+                if (parseIndex < lines.length) {
+                    const percent = Math.floor((parseIndex / lines.length) * 100);
+                    loadingText.innerText = `PROCESSING DATA SAFELY: ${percent}%`;
+                    requestAnimationFrame(parseBatch); // Yield to the mobile browser
+                } else {
+                    isFullyLoaded = true;
+                    readerTitle.innerText = "SYSTEM READY";
+                    readerText.innerHTML = "<div style='color:#00ffcc; font-family:monospace;'>> SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER</div>";
+                    drawBackgroundLinesIncremental();
+                }
             }
             
-            isFullyLoaded = true;
-            readerTitle.innerText = "SYSTEM READY";
-            readerText.innerHTML = "<div style='color:#00ffcc; font-family:monospace;'>> SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER</div>";
-            drawBackgroundLinesIncremental();
+            parseBatch(); // Start the safe thinking loop
         }
 
-        // Global JSONP callback for the Script Injection
         window.processBibleData = function(data) {
             if (data && data.contents) {
                 parseData(data.contents);
@@ -300,7 +314,6 @@
             }
         };
 
-        // Unbreakable Fetch Protocol
         async function fetchRealData() {
             const targetUrl = 'https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt';
 
@@ -316,10 +329,8 @@
                 if (res.ok) return parseData(await res.text());
             } catch(e) {}
 
-            // The Ultimate Bypass: Script Injection
             loadingText.innerText = "FIREWALL TOO STRICT. DEPLOYING SCRIPT INJECTION...";
             const script = document.createElement('script');
-            // This forces the browser to treat the data as a trusted script
             script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}&callback=processBibleData`;
             script.onerror = () => {
                 loadingText.innerText = "FATAL ERROR: BROWSER BLOCKED ALL CONNECTIONS.";
@@ -542,3 +553,4 @@
     </script>
 </body>
 </html>
+
