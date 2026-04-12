@@ -86,7 +86,6 @@
         const aiTitle = document.getElementById('ai-title');
         const aiResults = document.getElementById('ai-results');
 
-        // Built-in Bible Structure
         const books = [
             { n: "Genesis", c: 50 }, { n: "Exodus", c: 40 }, { n: "Leviticus", c: 27 }, { n: "Numbers", c: 36 }, { n: "Deuteronomy", c: 34 },
             { n: "Joshua", c: 24 }, { n: "Judges", c: 21 }, { n: "Ruth", c: 4 }, { n: "1 Samuel", c: 31 }, { n: "2 Samuel", c: 24 },
@@ -113,12 +112,10 @@
             totalChapters += book.c;
         });
 
-        // Offline Network Generation (Generates a beautiful arc diagram instantly)
         const arcs = [];
         for(let i = 0; i < 3000; i++) {
             const start = Math.floor(Math.random() * totalChapters);
             let end = Math.floor(Math.random() * totalChapters);
-            // Bias some lines to be shorter, some to be longer for a beautiful shape
             if(Math.random() > 0.4) end = (start + Math.floor(Math.random() * 100)) % totalChapters;
             if(start !== end) arcs.push({ start, end });
         }
@@ -126,6 +123,7 @@
         let width, height;
         let activeChapterIndex = null;
         let currentlyLoadedChapter = null;
+        let streamTimer = null; // The safety lock delay
 
         function resize() {
             const rect = document.getElementById('viz-container').getBoundingClientRect();
@@ -144,10 +142,8 @@
 
         function drawInteractiveState() {
             ctx.clearRect(0, 0, width, height);
-            // Safely anchor the timeline so it never falls off the screen
             const baselineY = height - 25; 
 
-            // Draw the rainbow timeline
             for (let i = 0; i < totalChapters; i++) {
                 const hue = (chapterNodes[i].bIndex / books.length) * 360;
                 if (activeChapterIndex !== null && i !== activeChapterIndex) {
@@ -161,7 +157,6 @@
             ctx.lineWidth = 0.5;
 
             if (activeChapterIndex === null) {
-                // Draw full beautiful background
                 ctx.globalCompositeOperation = 'lighter';
                 for (let i = 0; i < arcs.length; i++) {
                     const arc = arcs[i];
@@ -179,7 +174,6 @@
                 }
                 ctx.globalCompositeOperation = 'source-over';
             } else {
-                // Draw ONLY the highlighted connections
                 ctx.lineWidth = 1.5;
                 const activeLinks = arcs.filter(a => a.start === activeChapterIndex || a.end === activeChapterIndex);
                 
@@ -198,15 +192,11 @@
                     ctx.stroke();
                 }
 
-                // Draw the targeting dot
                 const targetX = getX(activeChapterIndex);
                 ctx.beginPath();
                 ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
                 ctx.fillStyle = '#ffffff';
                 ctx.fill();
-                
-                const node = chapterNodes[activeChapterIndex];
-                loadChapterText(node.bName, node.ch);
             }
         }
 
@@ -214,7 +204,6 @@
             if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) return;
             currentlyLoadedChapter = `${bookName} ${chapterNum}`;
             
-            readerTitle.innerText = `${bookName} ${chapterNum}`;
             readerText.innerHTML = `<div style="color:#00ffcc; font-family:monospace;">> SECURELY STREAMING TEXT...</div>`;
             
             try {
@@ -233,7 +222,7 @@
                 readerText.innerHTML = html;
                 document.getElementById('reader-container').scrollTop = 0;
             } catch (err) {
-                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT. SWIPE TIMELINE TO RETRY.</div>`;
+                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT. API BLOCKED. SWIPE TIMELINE SLOWLY TO RETRY.</div>`;
                 currentlyLoadedChapter = null; 
             }
         }
@@ -279,7 +268,25 @@
             } else {
                 activeChapterIndex = null; 
             }
+            
             drawInteractiveState();
+
+            // Clear the timer every time the finger moves so it doesn't spam the API
+            clearTimeout(streamTimer);
+
+            if (activeChapterIndex !== null) {
+                const node = chapterNodes[activeChapterIndex];
+                readerTitle.innerText = `${node.bName} ${node.ch}`;
+                readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> LOCKING COORDINATES...</div>`;
+                
+                // Wait 600ms after the finger stops moving before asking the API for the text
+                streamTimer = setTimeout(() => {
+                    loadChapterText(node.bName, node.ch);
+                }, 600);
+            } else {
+                readerTitle.innerText = "SYSTEM READY";
+                readerText.innerHTML = `<div style="color: #00ffcc; font-family: monospace; margin-top: 20px;">> OFFLINE NETWORK GENERATED.<br>> SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER.</div>`;
+            }
         }
 
         canvas.addEventListener('mousedown', handleInteraction);
