@@ -16,8 +16,7 @@
         #reader-container {
             flex: 5; width: 100%; background-color: #0a0a0a; border-bottom: 2px solid #00ffcc;
             overflow-y: auto; padding: 20px; box-sizing: border-box; position: relative;
-            min-height: 0; 
-            scroll-behavior: smooth;
+            min-height: 0; scroll-behavior: smooth;
         }
         .reader-header {
             font-size: 20px; letter-spacing: 3px; color: #00ffcc; margin-bottom: 15px;
@@ -32,7 +31,6 @@
         #reader-title:active { background: rgba(0, 255, 204, 0.2); }
         .dropdown-icon { font-size: 14px; margin-left: 8px; vertical-align: middle; color: #aaaaaa; }
 
-        /* UPGRADED VERSE STYLING WITH HIGHLIGHTS */
         .verse-block {
             margin-bottom: 12px; line-height: 1.6; font-size: 16px; color: #dddddd;
             cursor: pointer; padding: 10px; border-radius: 6px; transition: all 0.3s ease;
@@ -217,7 +215,6 @@
             totalChapters += book.c;
         });
 
-        // Global background arcs
         const arcs = [];
         for(let i = 0; i < 3000; i++) {
             const start = Math.floor(Math.random() * totalChapters);
@@ -234,8 +231,6 @@
         
         let isHudExpanded = false; 
         let isHudMinimized = false; 
-
-        // NEW: Verse-Level Tracking Variables
         let activeVerseNum = null;
         let verseLinks = [];
 
@@ -326,7 +321,6 @@
             if (targetGlobalIndex !== -1) jumpToChapter(targetGlobalIndex, 1);
         }
 
-        // UPGRADED JUMP FUNCTION (now accepts a target verse!)
         window.jumpToChapter = function(targetIndex, targetVerse = 1) {
             isHudExpanded = false; 
             isHudMinimized = false; 
@@ -335,7 +329,7 @@
             
             activeChapterIndex = targetIndex;
             activeVerseNum = targetVerse;
-            verseLinks = []; // Clear the old connections instantly
+            verseLinks = []; 
             
             drawInteractiveState();
             
@@ -363,31 +357,26 @@
             }
         };
 
-        // NEW: VERSE SELECTION LOGIC
         window.selectVerse = function(bookName, chapterNum, verseNum, element) {
-            // If they double tap the same verse, trigger the AI popup
             if (activeVerseNum === verseNum && element.classList.contains('highlighted-verse')) {
                 triggerAI(bookName, chapterNum, verseNum);
                 return;
             }
             
-            // Remove highlight from all others
             document.querySelectorAll('.verse-block').forEach(el => el.classList.remove('highlighted-verse'));
             
             if(element) {
                 element.classList.add('highlighted-verse');
-                // Smooth scroll perfectly into view
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             
             activeVerseNum = verseNum;
             
-            // Generate a hyper-specific set of links JUST for this verse
             verseLinks = [];
-            const numLinks = Math.floor(Math.random() * 6) + 3; // 3 to 8 links per verse
+            const numLinks = Math.floor(Math.random() * 6) + 3; 
             for(let i=0; i < numLinks; i++) {
                 let targetIdx = Math.floor(Math.random() * totalChapters);
-                let randomTargetVerse = Math.floor(Math.random() * 15) + 1; // Generates a random target verse
+                let randomTargetVerse = Math.floor(Math.random() * 15) + 1; 
                 if (targetIdx !== activeChapterIndex) {
                     verseLinks.push({ start: activeChapterIndex, end: targetIdx, targetVerse: randomTargetVerse });
                 }
@@ -404,12 +393,12 @@
             let linkedBookIndices = new Map();
             
             if (activeChapterIndex !== null) {
-                // Now uses the specific verseLinks instead of the global chapter arcs!
                 activeLinks = verseLinks;
                 activeLinks.forEach(arc => {
+                    // FIX: Always use the END index (the target destination) to pull the true rainbow color
                     const targetIdx = arc.end;
                     const targetBookIdx = chapterNodes[targetIdx].bIndex;
-                    const arcHue = (chapterNodes[arc.start].bIndex / books.length) * 360;
+                    const arcHue = (chapterNodes[targetIdx].bIndex / books.length) * 360; 
                     linkedBookIndices.set(targetBookIdx, arcHue);
                 });
             }
@@ -433,6 +422,7 @@
                         ctx.font = "bold 11px monospace";
                         ctx.fillText(chapterNodes[i].bName.toUpperCase(), 0, 3);
                     } else if (activeChapterIndex !== null && linkedBookIndices.has(chapterNodes[i].bIndex)) {
+                        // THIS COLORS THE VERTICAL BOOK NAMES TO MATCH THEIR STRINGS
                         const matchHue = linkedBookIndices.get(chapterNodes[i].bIndex);
                         ctx.fillStyle = `hsl(${matchHue}, 100%, 75%)`;
                         ctx.font = "bold 10px monospace";
@@ -452,7 +442,6 @@
                 ctx.lineWidth = 0.5;
                 ctx.globalCompositeOperation = 'lighter';
                 
-                // Draw background arcs
                 for (let i = 0; i < arcs.length; i++) {
                     const arc = arcs[i];
                     const startX = getX(arc.start);
@@ -483,9 +472,11 @@
                     const endX = getX(arc.end);
                     const distance = Math.abs(startX - endX);
                     const controlY = baselineY - (distance * 0.85); 
-                    const arcHue = (chapterNodes[arc.start].bIndex / books.length) * 360;
                     
-                    ctx.strokeStyle = `hsla(${arcHue}, 100%, 70%, 0.7)`;
+                    // FIX: The arc strings draw using the TARGET's hue to match where they land!
+                    const arcHue = (targetNode.bIndex / books.length) * 360;
+                    
+                    ctx.strokeStyle = `hsla(${arcHue}, 100%, 70%, 0.8)`;
                     ctx.beginPath();
                     ctx.moveTo(startX, baselineY);
                     ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
@@ -498,6 +489,7 @@
                     ctx.fill();
 
                     if (displayedTargets < 5 || isHudExpanded) {
+                        // FIX: The HUD boxes draw using the exact same target hue!
                         targetListHTML += `
                             <div class="target-item" 
                                  style="color: hsl(${arcHue}, 100%, 80%); 
@@ -515,7 +507,6 @@
                 infoHud.style.pointerEvents = "auto";
                 
                 const originNode = chapterNodes[activeChapterIndex];
-                // HUD NOW SHOWS THE EXACT VERSE ORIGIN
                 hudBook.innerText = `${originNode.bName} ${originNode.ch}:${activeVerseNum || 1}`;
                 hudLinks.innerText = `${activeLinks.length} DETECTED`;
                 
@@ -537,11 +528,9 @@
             }
         }
 
-        // UPGRADED TO ACCEPT TARGET VERSE
         function loadChapterText(bookName, chapterNum, targetVerse = 1) {
             if (!bibleDB) return;
             
-            // If we are already in the chapter, just select the new verse without reloading the HTML!
             if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) {
                 setTimeout(() => {
                     const vEl = document.getElementById(`verse-${targetVerse}`);
@@ -557,7 +546,6 @@
             let html = '';
             verses.forEach((text, i) => {
                 const safeText = text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                // Injected the unique IDs so the code can find and scroll to them
                 html += `<div class="verse-block" id="verse-${i + 1}" onclick="selectVerse('${bookName}', ${chapterNum}, ${i + 1}, this)">`;
                 html += `<span class="verse-num">${i + 1}</span>${safeText}`;
                 html += `</div>`;
@@ -565,7 +553,6 @@
             
             readerText.innerHTML = html;
             
-            // Automatically selects and highlights the target verse when it finishes loading!
             setTimeout(() => {
                 const vEl = document.getElementById(`verse-${targetVerse}`);
                 if(vEl) selectVerse(bookName, chapterNum, targetVerse, vEl);
@@ -624,7 +611,7 @@
                 hudMinimizeIcon.innerText = '▼';
 
                 activeChapterIndex = newIndex;
-                verseLinks = []; // Clear the lines while it travels
+                verseLinks = []; 
                 
                 drawInteractiveState();
                 clearTimeout(streamTimer);
@@ -634,7 +621,7 @@
                 readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> EXTRACTING LOCAL DATA...</div>`;
                 
                 streamTimer = setTimeout(() => {
-                    loadChapterText(node.bName, node.ch, 1); // Default to verse 1 on timeline swipe
+                    loadChapterText(node.bName, node.ch, 1); 
                 }, 100);
             } else if (newIndex === null) {
                  activeChapterIndex = null;
