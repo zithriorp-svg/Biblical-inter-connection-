@@ -36,7 +36,6 @@
             font-size: 14px; letter-spacing: 4px; color: #aaaaaa; pointer-events: none;
         }
 
-        /* Upgraded Telemetry Matrix */
         .hud-box {
             position: absolute; bottom: 40px; left: 10px;
             background-color: rgba(5, 10, 8, 0.9);
@@ -46,6 +45,7 @@
             pointer-events: none; max-width: 40%; max-height: 60%;
             display: flex; flex-direction: column;
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+            transition: opacity 0.3s ease;
         }
         .hud-title {
             color: #00ffcc; font-size: 12px; letter-spacing: 2px;
@@ -93,7 +93,7 @@
         <div class="reader-header" id="reader-title">SYSTEM READY</div>
         <div id="reader-text">
             <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;">
-                > NETWORK INITIALIZED.<br>
+                > OFFLINE NETWORK GENERATED.<br>
                 > SWIPE THE BOTTOM TIMELINE TO SCAN CONNECTIONS.
             </div>
         </div>
@@ -196,7 +196,7 @@
             }
 
             if (activeChapterIndex === null) {
-                infoHud.style.opacity = "0"; // Hide details
+                infoHud.style.opacity = "0"; 
                 ctx.lineWidth = 0.5;
                 ctx.globalCompositeOperation = 'lighter';
                 
@@ -233,28 +233,24 @@
                     const controlY = baselineY - (distance * 0.85); 
                     const hue = (chapterNodes[arc.start].bIndex / books.length) * 360;
                     
-                    // Draw the line
                     ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
                     ctx.beginPath();
                     ctx.moveTo(startX, baselineY);
                     ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
                     ctx.stroke();
 
-                    // Draw a glowing anchor dot on the target chapter
                     const tX = getX(targetIdx);
                     ctx.beginPath();
                     ctx.arc(tX, baselineY - 2, 2.5, 0, Math.PI * 2);
                     ctx.fillStyle = '#ffffff';
                     ctx.fill();
 
-                    // Add to the HUD list (Limit to 5 so it doesn't overflow the screen)
                     if (displayedTargets < 5) {
                         targetListHTML += `<div class="target-item">> ${targetNode.bName} ${targetNode.ch}</div>`;
                         displayedTargets++;
                     }
                 }
 
-                // Update the Matrix HUD
                 infoHud.style.opacity = "1";
                 const originNode = chapterNodes[activeChapterIndex];
                 hudBook.innerText = `${originNode.bName} ${originNode.ch}`;
@@ -265,7 +261,6 @@
                 }
                 hudTargets.innerHTML = targetListHTML;
 
-                // Draw the main origin dot
                 const originX = getX(activeChapterIndex);
                 ctx.beginPath();
                 ctx.arc(originX, baselineY, 6, 0, Math.PI * 2);
@@ -335,18 +330,17 @@
             const rect = canvas.getBoundingClientRect();
             let clientX = event.touches && event.touches.length > 0 ? event.touches[0].clientX : event.clientX;
             const margin = 10;
-            const percentage = (clientX - rect.left - margin) / (width - margin * 2);
+            let percentage = (clientX - rect.left - margin) / (width - margin * 2);
             
+            // This guarantees the selection stays locked and never glitches off the screen
             if (percentage >= 0 && percentage <= 1) {
-                activeChapterIndex = Math.floor(percentage * totalChapters);
-            } else {
-                activeChapterIndex = null; 
+                activeChapterIndex = Math.min(totalChapters - 1, Math.floor(percentage * totalChapters));
             }
-            
-            drawInteractiveState();
-            clearTimeout(streamTimer);
 
             if (activeChapterIndex !== null) {
+                drawInteractiveState();
+                clearTimeout(streamTimer);
+
                 const node = chapterNodes[activeChapterIndex];
                 readerTitle.innerText = `${node.bName} ${node.ch}`;
                 readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> LOCKING COORDINATES...</div>`;
@@ -354,20 +348,14 @@
                 streamTimer = setTimeout(() => {
                     loadChapterText(node.bName, node.ch);
                 }, 600);
-            } else {
-                readerTitle.innerText = "SYSTEM READY";
-                readerText.innerHTML = `<div style="color: #00ffcc; font-family: monospace; margin-top: 20px;">> OFFLINE NETWORK GENERATED.<br>> SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER.</div>`;
             }
         }
 
+        // We completely removed the commands that cleared the screen when you let go!
         canvas.addEventListener('mousedown', handleInteraction);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
-        
-        canvas.addEventListener('mouseup', () => { activeChapterIndex = null; drawInteractiveState(); });
-        canvas.addEventListener('mouseleave', () => { activeChapterIndex = null; drawInteractiveState(); });
-        canvas.addEventListener('touchend', () => { activeChapterIndex = null; drawInteractiveState(); });
 
         setTimeout(resize, 100);
     </script>
