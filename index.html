@@ -39,6 +39,7 @@
             top: 0;
             background: rgba(10,10,10,0.9);
             padding-bottom: 10px;
+            z-index: 5;
         }
         .verse-block {
             margin-bottom: 12px;
@@ -137,7 +138,7 @@
 
         #loadingOverlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-family: monospace; font-size: 14px; color: #00ffcc; z-index: 20;
+            font-family: monospace; font-size: 12px; color: #00ffcc; z-index: 20; text-align: center;
         }
     </style>
 </head>
@@ -154,14 +155,13 @@
         <div id="reader-text">
             <div style="color: #666; font-family: monospace; margin-top: 20px;">
                 > SYSTEM BOOTING...<br>
-                > DOWNLOADING TEXT DATABASE...<br>
                 > AWAITING TIMELINE SELECTION...
             </div>
         </div>
     </div>
 
     <div id="viz-container">
-        <div id="loadingOverlay">DOWNLOADING NETWORK...</div>
+        <div id="loadingOverlay">BYPASSING FIREWALL...</div>
         <div class="hud-box" id="infoHud">
             <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
             <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
@@ -223,7 +223,7 @@
 
         const arcs = [];
         const chapterArcs = Array.from({length: totalChapters}, () => []);
-        const rawConnections = []; // Stores text strings of connections
+        const rawConnections = []; 
         
         let activeChapterIndex = null;
         let isFullyLoaded = false;
@@ -249,8 +249,13 @@
 
         async function fetchRealData() {
             try {
-                loadingText.innerText = "LINKING 63,000 NODES...";
-                const response = await fetch('https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt');
+                loadingText.innerText = "LINKING 63,000 NODES VIA SECURE CDN...";
+                
+                // Using a trusted Content Delivery Network (jsDelivr) to bypass mobile GitHub blocks
+                const response = await fetch('https://cdn.jsdelivr.net/gh/andrewgiessel/openbible-data@master/cross_references.txt');
+                
+                if (!response.ok) throw new Error("CDN blocked");
+                
                 const text = await response.text();
                 const lines = text.split('\n');
                 
@@ -273,7 +278,6 @@
                             const c1 = b1.startCh + (parseInt(fromSplit[1]) - 1);
                             const c2 = b2.startCh + (parseInt(toSplit[1]) - 1);
                             
-                            // Save raw string for AI analysis
                             rawConnections.push({ from: fromRef, to: toRef });
 
                             if (c1 !== c2 && c1 < totalChapters && c2 < totalChapters) {
@@ -296,12 +300,11 @@
                 drawBackgroundLinesIncremental();
 
             } catch (err) {
-                loadingText.innerText = "NETWORK ERROR";
+                loadingText.innerText = "NETWORK ERROR: " + err.message;
                 loadingText.style.color = "#ff3333";
             }
         }
 
-        // ---- BIBLE API FETCHING ----
         async function loadChapterText(bookName, chapterNum) {
             if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) return;
             currentlyLoadedChapter = `${bookName} ${chapterNum}`;
@@ -310,14 +313,13 @@
             readerText.innerHTML = `<div style="color:#00ffcc; font-family:monospace;">> FETCHING SECURE TEXT...</div>`;
             
             try {
-                // Using free Bible API
                 const query = `${bookName}+${chapterNum}`.replace(/ /g, '');
                 const response = await fetch(`https://bible-api.com/${query}`);
                 const data = await response.json();
                 
                 let html = '';
                 data.verses.forEach(v => {
-                    html += `<div class="verse-block" onclick="triggerAI('${bookName}', ${chapterNum}, ${v.verse}, '${v.text.replace(/'/g, "\\'")}')">`;
+                    html += `<div class="verse-block" onclick="triggerAI('${bookName}', ${chapterNum}, ${v.verse})">`;
                     html += `<span class="verse-num">${v.verse}</span>${v.text}`;
                     html += `</div>`;
                 });
@@ -325,21 +327,19 @@
                 readerText.innerHTML = html;
                 document.getElementById('reader-container').scrollTop = 0;
             } catch (err) {
-                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT.</div>`;
+                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT. TAP TO RETRY.</div>`;
+                currentlyLoadedChapter = null; // allow retry
             }
         }
 
-        // ---- AI OVERLAY SIMULATION ----
-        async function triggerAI(book, chapter, verse, text) {
+        async function triggerAI(book, chapter, verse) {
             aiOverlay.style.display = "flex";
             aiTitle.innerText = `ANALYZING: ${book} ${chapter}:${verse}`;
             aiResults.innerHTML = `<div style="color:#00ffcc; font-family:monospace; margin-bottom:20px;">> RUNNING CROSS-REFERENCE ALGORITHM...</div>`;
             
-            // Find the ID format used in the dataset (e.g. Genesis -> Gen)
             const bookId = Object.keys(bookMap).find(key => bookMap[key].name === book);
             const searchRef = `${bookId}.${chapter}.${verse}`;
             
-            // Find all matching targets in the raw data
             const connections = rawConnections.filter(c => c.from === searchRef || c.to === searchRef);
             
             if (connections.length === 0) {
@@ -349,13 +349,12 @@
 
             aiResults.innerHTML += `<div style="margin-bottom: 15px;">Identified <b>${connections.length}</b> structural links. Fetching texts...</div>`;
             
-            // Limit to 5 so we don't overload the free API
             const maxToFetch = Math.min(connections.length, 5);
             let htmlBuild = "";
 
             for(let i=0; i < maxToFetch; i++) {
                 const targetRefStr = connections[i].from === searchRef ? connections[i].to : connections[i].from;
-                const parts = targetRefStr.split('.'); // [Book, Chap, Verse]
+                const parts = targetRefStr.split('.'); 
                 
                 if(parts.length === 3) {
                     const tBook = bookMap[parts[0]].name;
@@ -376,7 +375,7 @@
             }
 
             if (connections.length > 5) {
-                htmlBuild += `<div style="color:#aaa; font-size:12px; font-family:monospace;">> + ${connections.length - 5} MORE LINKS IN DEEP STORAGE...</div>`;
+                htmlBuild += `<div style="color:#aaa; font-size:12px; font-family:monospace; margin-top: 10px;">> + ${connections.length - 5} MORE LINKS IN DEEP STORAGE...</div>`;
             }
 
             aiResults.innerHTML = htmlBuild;
@@ -386,7 +385,6 @@
             aiOverlay.style.display = "none";
         }
 
-        // ---- CANVAS DRAWING LOGIC ----
         function getX(index) {
             const margin = 15;
             return margin + (index / (totalChapters - 1)) * (width - margin * 2);
@@ -479,7 +477,6 @@
             hudBook.innerText = node.bookName;
             hudChap.innerText = node.localCh;
             
-            // Trigger text load
             loadChapterText(node.bookName, node.localCh);
         }
 
@@ -516,7 +513,6 @@
         canvas.addEventListener('mouseleave', () => { activeChapterIndex = null; handleInteraction(event); });
         canvas.addEventListener('touchend', () => { activeChapterIndex = null; handleInteraction(event); });
 
-        // Initialize
         setTimeout(resize, 100);
         fetchRealData();
     </script>
