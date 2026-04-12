@@ -1,11 +1,10 @@
-const CACHE_NAME = 'offline-engine-v2';
+const CACHE_NAME = 'offline-engine-v3';
 
 self.addEventListener('install', e => {
     self.skipWaiting();
     e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['/', '/index.html'])));
 });
 
-// This deletes the old v1 cache but keeps your downloaded Bible data safe
 self.addEventListener('activate', e => {
     e.waitUntil(
         caches.keys().then(keys => Promise.all(
@@ -19,7 +18,6 @@ self.addEventListener('activate', e => {
     e.waitUntil(clients.claim());
 });
 
-// Network-First Strategy: Always shows your latest GitHub updates instantly!
 self.addEventListener('fetch', e => {
     e.respondWith(
         fetch(e.request).then(res => {
