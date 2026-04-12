@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Biblical Interface</title>
-    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Neural%20Bible%22%2C%22short_name%22%3A%22Neural%20Bible%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23050505%22%2C%22theme_color%22%3A%22%2300ffcc%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI%2BPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIGZpbGw9IiMwNTA1MDUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSI1MCIgZmlsbD0iIzAwZmZjYyIgZHk9Ii4zZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5CPC90ZXh0Pjwvc3ZnPg%3D%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Neural%20Bible%22%2C%22short_name%22%3A%22Neural%20Bible%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23050505%22%2C%22theme_color%22%3A%22%2300ffcc%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI%2BPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIGZpbGw9IiMwNTA1MDUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSI5MCIgZmlsbD0iIzAwZmZjYyIgZHk9Ii4zZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5CPC90ZXh0Pjwvc3ZnPg%3D%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
     <meta name="theme-color" content="#050505">
     <style>
         body {
@@ -65,10 +65,10 @@
         .hud-targets { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: auto; }
         
         .target-item {
-            padding: 5px 8px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;
-            font-weight: bold; border-left: 2px solid transparent; border-radius: 2px;
+            background: rgba(255,255,255,0.05); padding: 5px 8px; border-left: 2px solid transparent;
+            color: #dddddd; white-space: nowrap; cursor: pointer; transition: background 0.2s ease;
         }
-        .target-item:active { opacity: 0.5; }
+        .target-item:active { background: rgba(255, 255, 255, 0.3) !important; color: #ffffff !important; }
 
         .overlay-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -369,8 +369,6 @@
                     const endX = getX(arc.end);
                     const distance = Math.abs(startX - endX);
                     const controlY = baselineY - (distance * 0.85); 
-                    
-                    // Calculates the exact color of the string
                     const hue = (chapterNodes[arc.start].bIndex / books.length) * 360;
                     
                     ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
@@ -386,16 +384,14 @@
                     ctx.fill();
 
                     if (displayedTargets < 5) {
-                        // Applies the exact arc string color to the text and borders
-                        const matrixTextColor = `hsl(${hue}, 100%, 80%)`;
-                        const matrixBorderColor = `hsl(${hue}, 100%, 50%)`;
-                        const matrixBgColor = `hsla(${hue}, 100%, 50%, 0.1)`;
+                        // --- DYNAMIC BOOK COLORING ---
+                        // We calculate the color for the target book specifically.
+                        const targetHue = (books[targetNode.bIndex].bIndex / books.length) * 360;
+                        const bookColor = `hsl(${targetHue}, 100%, 70%)`;
                         
                         targetListHTML += `
-                            <div class="target-item" 
-                                 style="color: ${matrixTextColor}; border-left-color: ${matrixBorderColor}; background-color: ${matrixBgColor};" 
-                                 onclick="jumpToChapter(${targetIdx})">
-                                 > ${targetNode.bName} ${targetNode.ch}
+                            <div class="target-item" onclick="jumpToChapter(${targetIdx})">
+                                > <span style="color: ${bookColor} !important">${targetNode.bName}</span> ${targetNode.ch}
                             </div>
                         `;
                         displayedTargets++;
