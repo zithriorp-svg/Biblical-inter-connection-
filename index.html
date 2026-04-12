@@ -17,6 +17,7 @@
             flex: 5; width: 100%; background-color: #0a0a0a; border-bottom: 2px solid #00ffcc;
             overflow-y: auto; padding: 20px; box-sizing: border-box; position: relative;
             min-height: 0; 
+            scroll-behavior: smooth;
         }
         .reader-header {
             font-size: 20px; letter-spacing: 3px; color: #00ffcc; margin-bottom: 15px;
@@ -31,12 +32,21 @@
         #reader-title:active { background: rgba(0, 255, 204, 0.2); }
         .dropdown-icon { font-size: 14px; margin-left: 8px; vertical-align: middle; color: #aaaaaa; }
 
+        /* UPGRADED VERSE STYLING WITH HIGHLIGHTS */
         .verse-block {
             margin-bottom: 12px; line-height: 1.6; font-size: 16px; color: #dddddd;
-            cursor: pointer; padding: 8px; border-radius: 4px; transition: background 0.2s;
+            cursor: pointer; padding: 10px; border-radius: 6px; transition: all 0.3s ease;
+            border-left: 3px solid transparent;
         }
-        .verse-block:active { background-color: rgba(0, 255, 204, 0.2); }
+        .verse-block:active { background-color: rgba(0, 255, 204, 0.1); }
         .verse-num { color: #00ffcc; font-weight: bold; margin-right: 5px; font-size: 12px; }
+        
+        .highlighted-verse {
+            background-color: rgba(0, 255, 204, 0.1) !important;
+            border-left: 3px solid #00ffcc !important;
+            box-shadow: inset 50px 0 50px -50px rgba(0, 255, 204, 0.2);
+            color: #ffffff;
+        }
 
         #viz-container {
             flex: 5; width: 100%; position: relative; background-color: #050505; touch-action: none;
@@ -58,7 +68,6 @@
             min-width: 150px;
         }
         
-        /* New Clickable HUD Title */
         .hud-title {
             color: #00ffcc; font-size: 12px; letter-spacing: 2px;
             margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;
@@ -90,9 +99,7 @@
             pointer-events: auto;
         }
         .toggle-btn:active { background: rgba(0, 255, 204, 0.3); }
-        .toggle-btn.collapse {
-            color: #ff3333; border-color: rgba(255,51,51,0.4); background: rgba(255,51,51,0.1);
-        }
+        .toggle-btn.collapse { color: #ff3333; border-color: rgba(255,51,51,0.4); background: rgba(255,51,51,0.1); }
         .toggle-btn.collapse:active { background: rgba(255,51,51,0.3); }
 
         .overlay-screen {
@@ -110,10 +117,9 @@
             font-weight: bold; border-radius: 4px; margin-top: 10px; text-transform: uppercase; cursor: pointer;
         }
         .close-btn:active { background-color: #00ccaa; }
-
+        
         .ai-link { background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 10px; border-left: 3px solid #00ffcc; }
         .ai-link-ref { color: #00ffcc; font-weight: bold; margin-bottom: 5px;}
-
         .nav-item {
             background: rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; 
             text-align: center; cursor: pointer; font-family: monospace; font-size: 14px;
@@ -141,7 +147,7 @@
         </div>
         <div id="reader-text">
             <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;" id="boot-status">
-                > BOOTING DATABASE ENGINE...
+                > BOOTING OFFLINE ENGINE...
             </div>
         </div>
     </div>
@@ -211,6 +217,7 @@
             totalChapters += book.c;
         });
 
+        // Global background arcs
         const arcs = [];
         for(let i = 0; i < 3000; i++) {
             const start = Math.floor(Math.random() * totalChapters);
@@ -226,17 +233,18 @@
         let bibleDB = null; 
         
         let isHudExpanded = false; 
-        let isHudMinimized = false; // State for the entire box collapse
+        let isHudMinimized = false; 
+
+        // NEW: Verse-Level Tracking Variables
+        let activeVerseNum = null;
+        let verseLinks = [];
 
         async function mountDatabases() {
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
-            
             const url = 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json';
-            
             try {
                 const cache = await caches.open('bible-data-v1');
                 let response = await cache.match(url);
-                
                 if (!response) {
                     bootStatus.innerHTML = `> FIRST BOOT DETECTED.<br>> DOWNLOADING ENTIRE BIBLE FOR OFFLINE USE (4.8MB)...<br>> PLEASE DO NOT CLOSE APP...`;
                     bootStatus.style.color = "#ffaa00";
@@ -244,9 +252,7 @@
                     if (!response.ok) throw new Error("Download failed");
                     await cache.put(url, response.clone());
                 }
-                
                 bibleDB = await response.json();
-                
                 readerTitle.innerHTML = `SYSTEM READY <span class="dropdown-icon">▼</span>`;
                 bootStatus.innerHTML = `> OFFLINE DATABASES MOUNTED.<br>> 100% AIRPLANE MODE CAPABLE.<br>> SWIPE TIMELINE OR TAP HEADER MENU.`;
                 bootStatus.style.color = "#00ffcc";
@@ -276,7 +282,6 @@
             navOverlay.style.display = 'flex';
             renderTestament('OT');
         }
-
         function closeNav() { navOverlay.style.display = 'none'; }
 
         function renderTestament(test) {
@@ -301,7 +306,6 @@
         function renderChapters(bookIndex) {
             const b = books[bookIndex];
             const returnTestament = bookIndex < 39 ? "'OT'" : "'NT'";
-            
             let html = `
                 <div style="margin-bottom: 15px; color:#00ffcc; text-align:center; font-size: 16px; font-weight:bold; letter-spacing: 2px;">
                     ${b.n.toUpperCase()} 
@@ -319,28 +323,20 @@
         function executeJump(bookIndex, chapterNum) {
             const targetGlobalIndex = chapterNodes.findIndex(n => n.bIndex === bookIndex && n.ch === chapterNum);
             closeNav();
-            if (targetGlobalIndex !== -1) jumpToChapter(targetGlobalIndex);
+            if (targetGlobalIndex !== -1) jumpToChapter(targetGlobalIndex, 1);
         }
 
-        // NEW: Toggle function for the entire HUD Box
-        window.toggleHudMinimize = function() {
-            isHudMinimized = !isHudMinimized;
-            if (isHudMinimized) {
-                hudContentWrapper.style.display = 'none';
-                hudMinimizeIcon.innerText = '▲';
-            } else {
-                hudContentWrapper.style.display = 'block';
-                hudMinimizeIcon.innerText = '▼';
-            }
-        };
-
-        window.jumpToChapter = function(targetIndex) {
+        // UPGRADED JUMP FUNCTION (now accepts a target verse!)
+        window.jumpToChapter = function(targetIndex, targetVerse = 1) {
             isHudExpanded = false; 
-            isHudMinimized = false; // Auto-expand the box if you jump somewhere new
+            isHudMinimized = false; 
             hudContentWrapper.style.display = 'block';
             hudMinimizeIcon.innerText = '▼';
             
             activeChapterIndex = targetIndex;
+            activeVerseNum = targetVerse;
+            verseLinks = []; // Clear the old connections instantly
+            
             drawInteractiveState();
             
             clearTimeout(streamTimer);
@@ -349,19 +345,55 @@
             readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> EXTRACTING LOCAL DATA...</div>`;
             
             streamTimer = setTimeout(() => {
-                loadChapterText(node.bName, node.ch);
+                loadChapterText(node.bName, node.ch, targetVerse);
             }, 100); 
+        };
+
+        window.toggleHudMinimize = function() {
+            isHudMinimized = !isHudMinimized;
+            hudContentWrapper.style.display = isHudMinimized ? 'none' : 'block';
+            hudMinimizeIcon.innerText = isHudMinimized ? '▲' : '▼';
         };
 
         window.toggleHudExpanded = function() {
             isHudExpanded = !isHudExpanded;
             drawInteractiveState();
-            
             if (isHudExpanded) {
-                setTimeout(() => {
-                    hudTargets.scrollTop = hudTargets.scrollHeight;
-                }, 50);
+                setTimeout(() => { hudTargets.scrollTop = hudTargets.scrollHeight; }, 50);
             }
+        };
+
+        // NEW: VERSE SELECTION LOGIC
+        window.selectVerse = function(bookName, chapterNum, verseNum, element) {
+            // If they double tap the same verse, trigger the AI popup
+            if (activeVerseNum === verseNum && element.classList.contains('highlighted-verse')) {
+                triggerAI(bookName, chapterNum, verseNum);
+                return;
+            }
+            
+            // Remove highlight from all others
+            document.querySelectorAll('.verse-block').forEach(el => el.classList.remove('highlighted-verse'));
+            
+            if(element) {
+                element.classList.add('highlighted-verse');
+                // Smooth scroll perfectly into view
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            
+            activeVerseNum = verseNum;
+            
+            // Generate a hyper-specific set of links JUST for this verse
+            verseLinks = [];
+            const numLinks = Math.floor(Math.random() * 6) + 3; // 3 to 8 links per verse
+            for(let i=0; i < numLinks; i++) {
+                let targetIdx = Math.floor(Math.random() * totalChapters);
+                let randomTargetVerse = Math.floor(Math.random() * 15) + 1; // Generates a random target verse
+                if (targetIdx !== activeChapterIndex) {
+                    verseLinks.push({ start: activeChapterIndex, end: targetIdx, targetVerse: randomTargetVerse });
+                }
+            }
+            
+            drawInteractiveState();
         };
 
         function drawInteractiveState() {
@@ -372,9 +404,10 @@
             let linkedBookIndices = new Map();
             
             if (activeChapterIndex !== null) {
-                activeLinks = arcs.filter(a => a.start === activeChapterIndex || a.end === activeChapterIndex);
+                // Now uses the specific verseLinks instead of the global chapter arcs!
+                activeLinks = verseLinks;
                 activeLinks.forEach(arc => {
-                    const targetIdx = (arc.start === activeChapterIndex) ? arc.end : arc.start;
+                    const targetIdx = arc.end;
                     const targetBookIdx = chapterNodes[targetIdx].bIndex;
                     const arcHue = (chapterNodes[arc.start].bIndex / books.length) * 360;
                     linkedBookIndices.set(targetBookIdx, arcHue);
@@ -419,6 +452,7 @@
                 ctx.lineWidth = 0.5;
                 ctx.globalCompositeOperation = 'lighter';
                 
+                // Draw background arcs
                 for (let i = 0; i < arcs.length; i++) {
                     const arc = arcs[i];
                     const startX = getX(arc.start);
@@ -436,14 +470,14 @@
                 ctx.globalCompositeOperation = 'source-over';
             } else {
                 ctx.lineWidth = 1.5;
-                
                 let targetListHTML = "";
                 let displayedTargets = 0;
 
                 for (let i = 0; i < activeLinks.length; i++) {
                     const arc = activeLinks[i];
-                    const targetIdx = (arc.start === activeChapterIndex) ? arc.end : arc.start;
+                    const targetIdx = arc.end;
                     const targetNode = chapterNodes[targetIdx];
+                    const targetVerseNum = arc.targetVerse;
                     
                     const startX = getX(arc.start);
                     const endX = getX(arc.end);
@@ -469,8 +503,8 @@
                                  style="color: hsl(${arcHue}, 100%, 80%); 
                                         border-left-color: hsl(${arcHue}, 100%, 50%); 
                                         background-color: hsla(${arcHue}, 100%, 50%, 0.1);" 
-                                 onclick="jumpToChapter(${targetIdx})">
-                                 > ${targetNode.bName} ${targetNode.ch}
+                                 onclick="jumpToChapter(${targetIdx}, ${targetVerseNum})">
+                                 > <span style="color:hsl(${arcHue}, 100%, 70%)">${targetNode.bName}</span> ${targetNode.ch}:${targetVerseNum}
                             </div>
                         `;
                     }
@@ -481,7 +515,8 @@
                 infoHud.style.pointerEvents = "auto";
                 
                 const originNode = chapterNodes[activeChapterIndex];
-                hudBook.innerText = `${originNode.bName} ${originNode.ch}`;
+                // HUD NOW SHOWS THE EXACT VERSE ORIGIN
+                hudBook.innerText = `${originNode.bName} ${originNode.ch}:${activeVerseNum || 1}`;
                 hudLinks.innerText = `${activeLinks.length} DETECTED`;
                 
                 if (activeLinks.length > 5) {
@@ -502,24 +537,39 @@
             }
         }
 
-        function loadChapterText(bookName, chapterNum) {
+        // UPGRADED TO ACCEPT TARGET VERSE
+        function loadChapterText(bookName, chapterNum, targetVerse = 1) {
             if (!bibleDB) return;
-            if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) return;
-            currentlyLoadedChapter = `${bookName} ${chapterNum}`;
             
+            // If we are already in the chapter, just select the new verse without reloading the HTML!
+            if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) {
+                setTimeout(() => {
+                    const vEl = document.getElementById(`verse-${targetVerse}`);
+                    if(vEl) selectVerse(bookName, chapterNum, targetVerse, vEl);
+                }, 50);
+                return;
+            }
+            
+            currentlyLoadedChapter = `${bookName} ${chapterNum}`;
             const bookIndex = books.findIndex(b => b.n === bookName);
             const verses = bibleDB[bookIndex].chapters[chapterNum - 1];
             
             let html = '';
             verses.forEach((text, i) => {
                 const safeText = text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                html += `<div class="verse-block" onclick="triggerAI('${bookName}', ${chapterNum}, ${i + 1})">`;
+                // Injected the unique IDs so the code can find and scroll to them
+                html += `<div class="verse-block" id="verse-${i + 1}" onclick="selectVerse('${bookName}', ${chapterNum}, ${i + 1}, this)">`;
                 html += `<span class="verse-num">${i + 1}</span>${safeText}`;
                 html += `</div>`;
             });
             
             readerText.innerHTML = html;
-            document.getElementById('reader-container').scrollTop = 0;
+            
+            // Automatically selects and highlights the target verse when it finishes loading!
+            setTimeout(() => {
+                const vEl = document.getElementById(`verse-${targetVerse}`);
+                if(vEl) selectVerse(bookName, chapterNum, targetVerse, vEl);
+            }, 50);
         }
 
         function triggerAI(book, chapter, verse) {
@@ -569,12 +619,12 @@
 
             if (newIndex !== activeChapterIndex && newIndex !== null) {
                 isHudExpanded = false;
-                // Auto expand the whole box if you swipe to a new chapter
                 isHudMinimized = false; 
                 hudContentWrapper.style.display = 'block';
                 hudMinimizeIcon.innerText = '▼';
 
                 activeChapterIndex = newIndex;
+                verseLinks = []; // Clear the lines while it travels
                 
                 drawInteractiveState();
                 clearTimeout(streamTimer);
@@ -584,7 +634,7 @@
                 readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> EXTRACTING LOCAL DATA...</div>`;
                 
                 streamTimer = setTimeout(() => {
-                    loadChapterText(node.bName, node.ch);
+                    loadChapterText(node.bName, node.ch, 1); // Default to verse 1 on timeline swipe
                 }, 100);
             } else if (newIndex === null) {
                  activeChapterIndex = null;
@@ -602,4 +652,3 @@
     </script>
 </body>
 </html>
-
