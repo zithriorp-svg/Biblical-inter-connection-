@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Biblical Interface</title>
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Neural%20Bible%22%2C%22short_name%22%3A%22Neural%20Bible%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23050505%22%2C%22theme_color%22%3A%22%2300ffcc%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI%2BPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIGZpbGw9IiMwNTA1MDUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSI1MCIgZmlsbD0iIzAwZmZjYyIgZHk9Ii4zZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5CPC90ZXh0Pjwvc3ZnPg%3D%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+    <meta name="theme-color" content="#050505">
     <style>
         body {
             margin: 0; padding: 0; background-color: #050505; color: #ffffff;
@@ -47,7 +49,6 @@
             font-size: 14px; letter-spacing: 4px; color: #aaaaaa; pointer-events: none;
         }
 
-        /* Matrix HUD with dynamic color support */
         .hud-box {
             position: absolute; bottom: 110px; left: 10px;
             background-color: rgba(5, 10, 8, 0.95); border: 1px solid rgba(0, 255, 204, 0.5);
@@ -63,14 +64,11 @@
         .hud-row span { color: #ffffff; font-weight: bold; }
         .hud-targets { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: auto; }
         
-        /* New rainbow-capable target list item */
         .target-item {
-            background: rgba(255,255,255,0.05); padding: 5px 8px;
-            /* Colors are now assigned directly by JavaScript */
-            white-space: nowrap; cursor: pointer; transition: all 0.2s ease;
-            font-weight: bold;
+            padding: 5px 8px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;
+            font-weight: bold; border-left: 2px solid transparent; border-radius: 2px;
         }
-        .target-item:active { background: rgba(255, 255, 255, 0.3) !important; color: #ffffff !important; }
+        .target-item:active { opacity: 0.5; }
 
         .overlay-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -114,12 +112,11 @@
 
     <div id="reader-container">
         <div class="reader-header">
-            <div id="reader-title" onclick="openNav()">SYSTEM READY <span class="dropdown-icon">▼</span></div>
+            <div id="reader-title" onclick="openNav()">INITIALIZING <span class="dropdown-icon">▼</span></div>
         </div>
         <div id="reader-text">
-            <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;">
-                > OFFLINE NETWORK GENERATED.<br>
-                > TAP THE HEADER MENU OR SWIPE TIMELINE TO BEGIN.
+            <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;" id="boot-status">
+                > BOOTING OFFLINE ENGINE...
             </div>
         </div>
     </div>
@@ -142,6 +139,7 @@
         const ctx = canvas.getContext('2d');
         const readerTitle = document.getElementById('reader-title');
         const readerText = document.getElementById('reader-text');
+        const bootStatus = document.getElementById('boot-status');
         
         const infoHud = document.getElementById('infoHud');
         const hudBook = document.getElementById('hudBook').querySelector('span');
@@ -193,6 +191,35 @@
         let activeChapterIndex = null;
         let currentlyLoadedChapter = null;
         let streamTimer = null;
+        let bibleDB = null; 
+
+        async function mountDatabases() {
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+            
+            const url = 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json';
+            
+            try {
+                const cache = await caches.open('bible-data-v1');
+                let response = await cache.match(url);
+                
+                if (!response) {
+                    bootStatus.innerHTML = `> FIRST BOOT DETECTED.<br>> DOWNLOADING ENTIRE BIBLE FOR OFFLINE USE (4.8MB)...<br>> PLEASE DO NOT CLOSE APP...`;
+                    bootStatus.style.color = "#ffaa00";
+                    response = await fetch(url);
+                    if (!response.ok) throw new Error("Download failed");
+                    await cache.put(url, response.clone());
+                }
+                
+                bibleDB = await response.json();
+                
+                readerTitle.innerHTML = `SYSTEM READY <span class="dropdown-icon">▼</span>`;
+                bootStatus.innerHTML = `> OFFLINE DATABASES MOUNTED.<br>> 100% AIRPLANE MODE CAPABLE.<br>> SWIPE TIMELINE OR TAP HEADER MENU.`;
+                bootStatus.style.color = "#00ffcc";
+            } catch (e) {
+                bootStatus.innerHTML = `ERROR: INTERNET REQUIRED FOR FIRST BOOT. PLEASE RECONNECT.`;
+                bootStatus.style.color = "#ff3333";
+            }
+        }
 
         function resize() {
             const rect = document.getElementById('viz-container').getBoundingClientRect();
@@ -210,6 +237,7 @@
         }
 
         function openNav() {
+            if (!bibleDB) return;
             navOverlay.style.display = 'flex';
             renderTestament('OT');
         }
@@ -266,11 +294,11 @@
             clearTimeout(streamTimer);
             const node = chapterNodes[activeChapterIndex];
             readerTitle.innerHTML = `${node.bName} ${node.ch} <span class="dropdown-icon">▼</span>`;
-            readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> JUMPING TO COORDINATES...</div>`;
+            readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> EXTRACTING LOCAL DATA...</div>`;
             
             streamTimer = setTimeout(() => {
                 loadChapterText(node.bName, node.ch);
-            }, 300); 
+            }, 100); 
         };
 
         function drawInteractiveState() {
@@ -329,9 +357,8 @@
                 ctx.lineWidth = 1.5;
                 const activeLinks = arcs.filter(a => a.start === activeChapterIndex || a.end === activeChapterIndex);
                 
+                let targetListHTML = "";
                 let displayedTargets = 0;
-                // Empty the HUD and prepare for dynamic color rendering
-                hudTargets.innerHTML = "";
 
                 for (let i = 0; i < activeLinks.length; i++) {
                     const arc = activeLinks[i];
@@ -343,12 +370,8 @@
                     const distance = Math.abs(startX - endX);
                     const controlY = baselineY - (distance * 0.85); 
                     
-                    // --- DYNAMIC COLOR CALCULATION ---
-                    // Calculate the EXACT color of the arc based on the timeline position
+                    // Calculates the exact color of the string
                     const hue = (chapterNodes[arc.start].bIndex / books.length) * 360;
-                    const arcColor = `hsl(${hue}, 100%, 70%)`;
-                    const matrixTextColor = `hsl(${hue}, 100%, 80%)`; // Slightly lighter for list text
-                    const matrixBorderColor = `hsla(${hue}, 100%, 50%, 0.5)`; // Matching border
                     
                     ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
                     ctx.beginPath();
@@ -363,18 +386,18 @@
                     ctx.fill();
 
                     if (displayedTargets < 5) {
-                        // Create the element manually so we can apply precise dynamic styles
-                        const item = document.createElement("div");
-                        item.className = "target-item";
-                        item.onclick = function() { jumpToChapter(targetIdx); };
-                        item.innerHTML = `> ${targetNode.bName} ${targetNode.ch}`;
+                        // Applies the exact arc string color to the text and borders
+                        const matrixTextColor = `hsl(${hue}, 100%, 80%)`;
+                        const matrixBorderColor = `hsl(${hue}, 100%, 50%)`;
+                        const matrixBgColor = `hsla(${hue}, 100%, 50%, 0.1)`;
                         
-                        // APPLY SYNCHRONIZED COLORS
-                        item.style.color = matrixTextColor;
-                        item.style.borderLeftColor = matrixBorderColor;
-                        item.style.boxShadow = `inset 5px 0 10px hsla(${hue}, 100%, 50%, 0.1)`;
-                        
-                        hudTargets.appendChild(item);
+                        targetListHTML += `
+                            <div class="target-item" 
+                                 style="color: ${matrixTextColor}; border-left-color: ${matrixBorderColor}; background-color: ${matrixBgColor};" 
+                                 onclick="jumpToChapter(${targetIdx})">
+                                 > ${targetNode.bName} ${targetNode.ch}
+                            </div>
+                        `;
                         displayedTargets++;
                     }
                 }
@@ -387,11 +410,9 @@
                 hudLinks.innerText = `${activeLinks.length} DETECTED`;
                 
                 if (activeLinks.length > 5) {
-                    const moreNodes = document.createElement("div");
-                    moreNodes.style.cssText = "color:#00ffcc; font-size:11px; margin-top:5px; font-weight:bold;";
-                    moreNodes.innerText = `+ ${activeLinks.length - 5} additional nodes`;
-                    hudTargets.appendChild(moreNodes);
+                    targetListHTML += `<div style="color:#00ffcc; font-size:11px; margin-top:5px; font-weight:bold;">+ ${activeLinks.length - 5} additional nodes</div>`;
                 }
+                hudTargets.innerHTML = targetListHTML;
 
                 const originX = getX(activeChapterIndex);
                 ctx.beginPath();
@@ -401,56 +422,52 @@
             }
         }
 
-        async function loadChapterText(bookName, chapterNum) {
+        function loadChapterText(bookName, chapterNum) {
+            if (!bibleDB) return;
             if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) return;
             currentlyLoadedChapter = `${bookName} ${chapterNum}`;
             
-            readerText.innerHTML = `<div style="color:#00ffcc; font-family:monospace;">> SECURELY STREAMING TEXT...</div>`;
+            const bookIndex = books.findIndex(b => b.n === bookName);
+            const verses = bibleDB[bookIndex].chapters[chapterNum - 1];
             
-            try {
-                const query = encodeURIComponent(`${bookName} ${chapterNum}`);
-                const response = await fetch(`https://bible-api.com/${query}`);
-                const data = await response.json();
-                
-                let html = '';
-                data.verses.forEach(v => {
-                    const safeText = v.text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    html += `<div class="verse-block" onclick="triggerAI('${bookName}', ${chapterNum}, ${v.verse})">`;
-                    html += `<span class="verse-num">${v.verse}</span>${safeText}`;
-                    html += `</div>`;
-                });
-                
-                readerText.innerHTML = html;
-                document.getElementById('reader-container').scrollTop = 0;
-            } catch (err) {
-                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT. API BLOCKED. SWIPE TIMELINE SLOWLY TO RETRY.</div>`;
-                currentlyLoadedChapter = null; 
-            }
+            let html = '';
+            verses.forEach((text, i) => {
+                const safeText = text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                html += `<div class="verse-block" onclick="triggerAI('${bookName}', ${chapterNum}, ${i + 1})">`;
+                html += `<span class="verse-num">${i + 1}</span>${safeText}`;
+                html += `</div>`;
+            });
+            
+            readerText.innerHTML = html;
+            document.getElementById('reader-container').scrollTop = 0;
         }
 
-        async function triggerAI(book, chapter, verse) {
+        function triggerAI(book, chapter, verse) {
+            if (!bibleDB) return;
             aiOverlay.style.display = "flex";
             aiTitle.innerText = `ANALYZING: ${book} ${chapter}:${verse}`;
-            aiResults.innerHTML = `<div style="color:#00ffcc; font-family:monospace; margin-bottom:20px;">> SEARCHING LOCAL DATABASE FOR REFERENCES...</div>`;
+            aiResults.innerHTML = `<div style="color:#00ffcc; font-family:monospace; margin-bottom:20px;">> DECRYPTING LOCAL CONNECTIONS...</div>`;
             
-            let htmlBuild = `<div style="margin-bottom: 15px;">Identified strong thematic links. Fetching texts...</div>`;
+            let htmlBuild = `<div style="margin-bottom: 15px;">Identified strong thematic links:</div>`;
 
             for(let i=0; i < 3; i++) {
-                const randomBook = books[Math.floor(Math.random() * books.length)];
+                const rBookIndex = Math.floor(Math.random() * books.length);
+                const randomBook = books[rBookIndex];
                 const randomChap = Math.floor(Math.random() * randomBook.c) + 1;
                 const randomVerse = Math.floor(Math.random() * 10) + 1;
                 
-                try {
-                    const apiQuery = encodeURIComponent(`${randomBook.n} ${randomChap}:${randomVerse}`);
-                    const res = await fetch(`https://bible-api.com/${apiQuery}`);
-                    const data = await res.json();
-                    htmlBuild += `
-                        <div class="ai-link">
-                            <div class="ai-link-ref">${randomBook.n} ${randomChap}:${randomVerse}</div>
-                            <div>"${data.verses[0].text.trim()}"</div>
-                        </div>
-                    `;
-                } catch(e) {}
+                let vText = "Text not found";
+                if (bibleDB[rBookIndex].chapters[randomChap - 1]) {
+                    const chVerses = bibleDB[rBookIndex].chapters[randomChap - 1];
+                    vText = chVerses[randomVerse - 1] || chVerses[0];
+                }
+
+                htmlBuild += `
+                    <div class="ai-link">
+                        <div class="ai-link-ref">${randomBook.n} ${randomChap}:${randomVerse}</div>
+                        <div>"${vText}"</div>
+                    </div>
+                `;
             }
 
             aiResults.innerHTML = htmlBuild;
@@ -459,6 +476,7 @@
         function closeAI() { aiOverlay.style.display = "none"; }
 
         function handleInteraction(event) {
+            if (!bibleDB) return;
             const rect = canvas.getBoundingClientRect();
             let clientX = event.touches && event.touches.length > 0 ? event.touches[0].clientX : event.clientX;
             const margin = 10;
@@ -474,11 +492,11 @@
 
                 const node = chapterNodes[activeChapterIndex];
                 readerTitle.innerHTML = `${node.bName} ${node.ch} <span class="dropdown-icon">▼</span>`;
-                readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> LOCKING COORDINATES...</div>`;
+                readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> EXTRACTING LOCAL DATA...</div>`;
                 
                 streamTimer = setTimeout(() => {
                     loadChapterText(node.bName, node.ch);
-                }, 600);
+                }, 100);
             }
         }
 
@@ -488,6 +506,7 @@
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
 
         setTimeout(resize, 100);
+        mountDatabases(); 
     </script>
 </body>
 </html>
