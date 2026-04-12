@@ -139,6 +139,7 @@
         #loadingOverlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             font-family: monospace; font-size: 12px; color: #00ffcc; z-index: 20; text-align: center;
+            width: 90%;
         }
     </style>
 </head>
@@ -161,7 +162,7 @@
     </div>
 
     <div id="viz-container">
-        <div id="loadingOverlay">BYPASSING FIREWALL...</div>
+        <div id="loadingOverlay">ESTABLISHING SECURE PIPELINES...</div>
         <div class="hud-box" id="infoHud">
             <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
             <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
@@ -249,14 +250,32 @@
 
         async function fetchRealData() {
             try {
-                loadingText.innerText = "LINKING 63,000 NODES VIA SECURE CDN...";
+                // Multi-Pipeline Routing to bypass strict mobile firewalls
+                const endpoints = [
+                    'https://raw.githack.com/andrewgiessel/openbible-data/master/cross_references.txt',
+                    'https://corsproxy.io/?https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt',
+                    'https://cdn.jsdelivr.net/gh/andrewgiessel/openbible-data@master/cross_references.txt'
+                ];
                 
-                // Using a trusted Content Delivery Network (jsDelivr) to bypass mobile GitHub blocks
-                const response = await fetch('https://cdn.jsdelivr.net/gh/andrewgiessel/openbible-data@master/cross_references.txt');
+                let text = null;
                 
-                if (!response.ok) throw new Error("CDN blocked");
+                for (let i = 0; i < endpoints.length; i++) {
+                    try {
+                        loadingText.innerText = `BYPASSING FIREWALL (PIPELINE ${i + 1})...`;
+                        const response = await fetch(endpoints[i]);
+                        if (response.ok) {
+                            text = await response.text();
+                            break; // Success! Exit loop
+                        }
+                    } catch (e) {
+                        // Move to the next backup pipeline automatically
+                    }
+                }
                 
-                const text = await response.text();
+                if (!text) {
+                    throw new Error("ALL BACKUP PIPELINES BLOCKED");
+                }
+                
                 const lines = text.split('\n');
                 
                 loadingText.innerText = "OPTIMIZING...";
@@ -328,7 +347,7 @@
                 document.getElementById('reader-container').scrollTop = 0;
             } catch (err) {
                 readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT. TAP TO RETRY.</div>`;
-                currentlyLoadedChapter = null; // allow retry
+                currentlyLoadedChapter = null; 
             }
         }
 
