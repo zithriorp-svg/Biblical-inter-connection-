@@ -36,9 +36,9 @@
             font-size: 14px; letter-spacing: 4px; color: #aaaaaa; pointer-events: none;
         }
 
-        /* Fixed Telemetry Matrix - Unlocked height and moved up */
+        /* Moved HUD up to avoid the new book names */
         .hud-box {
-            position: absolute; bottom: 60px; left: 10px;
+            position: absolute; bottom: 110px; left: 10px;
             background-color: rgba(5, 10, 8, 0.95);
             border: 1px solid rgba(0, 255, 204, 0.5);
             border-radius: 6px; padding: 15px;
@@ -183,7 +183,9 @@
 
         function drawInteractiveState() {
             ctx.clearRect(0, 0, width, height);
-            const baselineY = height - 25; 
+            
+            // Moved the timeline up to make room for the book names
+            const baselineY = height - 90; 
 
             for (let i = 0; i < totalChapters; i++) {
                 const hue = (chapterNodes[i].bIndex / books.length) * 360;
@@ -193,6 +195,25 @@
                     ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
                 }
                 ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 1.5, 12);
+
+                // Draws the names vertically below the timeline
+                if (chapterNodes[i].ch === 1) {
+                    ctx.save();
+                    ctx.translate(getX(i) + 2, baselineY + 20);
+                    ctx.rotate(Math.PI / 2);
+                    
+                    if (activeChapterIndex !== null && chapterNodes[activeChapterIndex].bIndex === chapterNodes[i].bIndex) {
+                        ctx.fillStyle = "#00ffcc";
+                        ctx.font = "bold 11px monospace";
+                        ctx.fillText(chapterNodes[i].bName.toUpperCase(), 0, 3);
+                    } else {
+                        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+                        ctx.font = "8px monospace";
+                        // Only draws the first 3 letters so it fits perfectly on mobile
+                        ctx.fillText(chapterNodes[i].bName.substring(0, 3).toUpperCase(), 0, 2);
+                    }
+                    ctx.restore();
+                }
             }
 
             if (activeChapterIndex === null) {
