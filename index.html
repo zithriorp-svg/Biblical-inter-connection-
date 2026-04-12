@@ -162,7 +162,7 @@
     </div>
 
     <div id="viz-container">
-        <div id="loadingOverlay">ESTABLISHING SECURE PIPELINES...</div>
+        <div id="loadingOverlay">BYPASSING FIREWALL...</div>
         <div class="hud-box" id="infoHud">
             <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
             <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
@@ -245,83 +245,87 @@
                 drawInteractiveState();
             }
         }
-
         window.addEventListener('resize', resize);
 
-        async function fetchRealData() {
-            try {
-                // Multi-Pipeline Routing to bypass strict mobile firewalls
-                const endpoints = [
-                    'https://raw.githack.com/andrewgiessel/openbible-data/master/cross_references.txt',
-                    'https://corsproxy.io/?https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt',
-                    'https://cdn.jsdelivr.net/gh/andrewgiessel/openbible-data@master/cross_references.txt'
-                ];
-                
-                let text = null;
-                
-                for (let i = 0; i < endpoints.length; i++) {
-                    try {
-                        loadingText.innerText = `BYPASSING FIREWALL (PIPELINE ${i + 1})...`;
-                        const response = await fetch(endpoints[i]);
-                        if (response.ok) {
-                            text = await response.text();
-                            break; // Success! Exit loop
-                        }
-                    } catch (e) {
-                        // Move to the next backup pipeline automatically
-                    }
-                }
-                
-                if (!text) {
-                    throw new Error("ALL BACKUP PIPELINES BLOCKED");
-                }
-                
-                const lines = text.split('\n');
-                
-                loadingText.innerText = "OPTIMIZING...";
-                const uniqueLinks = new Set();
+        // The core data processor
+        function parseData(text) {
+            const lines = text.split('\n');
+            loadingText.innerText = "DATA RECEIVED. OPTIMIZING NETWORK...";
+            const uniqueLinks = new Set();
 
-                for (let i = 1; i < lines.length; i++) {
-                    const parts = lines[i].split('\t');
-                    if (parts.length >= 2) {
-                        const fromRef = parts[0];
-                        const toRef = parts[1];
+            for (let i = 1; i < lines.length; i++) {
+                const parts = lines[i].split('\t');
+                if (parts.length >= 2) {
+                    const fromRef = parts[0];
+                    const toRef = parts[1];
+                    const fromSplit = fromRef.split('.');
+                    const toSplit = toRef.split('.');
+                    
+                    const b1 = bookMap[fromSplit[0]];
+                    const b2 = bookMap[toSplit[0]];
+                    
+                    if (b1 && b2) {
+                        const c1 = b1.startCh + (parseInt(fromSplit[1]) - 1);
+                        const c2 = b2.startCh + (parseInt(toSplit[1]) - 1);
                         
-                        const fromSplit = fromRef.split('.');
-                        const toSplit = toRef.split('.');
-                        
-                        const b1 = bookMap[fromSplit[0]];
-                        const b2 = bookMap[toSplit[0]];
-                        
-                        if (b1 && b2) {
-                            const c1 = b1.startCh + (parseInt(fromSplit[1]) - 1);
-                            const c2 = b2.startCh + (parseInt(toSplit[1]) - 1);
-                            
-                            rawConnections.push({ from: fromRef, to: toRef });
+                        rawConnections.push({ from: fromRef, to: toRef });
 
-                            if (c1 !== c2 && c1 < totalChapters && c2 < totalChapters) {
-                                const linkKey = c1 < c2 ? `${c1}-${c2}` : `${c2}-${c1}`;
-                                if (!uniqueLinks.has(linkKey)) {
-                                    uniqueLinks.add(linkKey);
-                                    const arc = { start: c1, end: c2, book1: b1.index };
-                                    arcs.push(arc);
-                                    chapterArcs[c1].push(arc);
-                                    chapterArcs[c2].push(arc);
-                                }
+                        if (c1 !== c2 && c1 < totalChapters && c2 < totalChapters) {
+                            const linkKey = c1 < c2 ? `${c1}-${c2}` : `${c2}-${c1}`;
+                            if (!uniqueLinks.has(linkKey)) {
+                                uniqueLinks.add(linkKey);
+                                const arc = { start: c1, end: c2, book1: b1.index };
+                                arcs.push(arc);
+                                chapterArcs[c1].push(arc);
+                                chapterArcs[c2].push(arc);
                             }
                         }
                     }
                 }
-                
-                isFullyLoaded = true;
-                readerTitle.innerText = "SYSTEM READY";
-                readerText.innerHTML = "<div style='color:#00ffcc; font-family:monospace;'>> SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER</div>";
-                drawBackgroundLinesIncremental();
+            }
+            
+            isFullyLoaded = true;
+            readerTitle.innerText = "SYSTEM READY";
+            readerText.innerHTML = "<div style='color:#00ffcc; font-family:monospace;'>> SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER</div>";
+            drawBackgroundLinesIncremental();
+        }
 
-            } catch (err) {
-                loadingText.innerText = "NETWORK ERROR: " + err.message;
+        // Global JSONP callback for the Script Injection
+        window.processBibleData = function(data) {
+            if (data && data.contents) {
+                parseData(data.contents);
+            } else {
+                loadingText.innerText = "CRITICAL ERROR: PAYLOAD CORRUPTED";
                 loadingText.style.color = "#ff3333";
             }
+        };
+
+        // Unbreakable Fetch Protocol
+        async function fetchRealData() {
+            const targetUrl = 'https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt';
+
+            try {
+                loadingText.innerText = "ATTEMPTING PROXY OVERRIDE (PIPELINE 1)...";
+                const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${targetUrl}`);
+                if (res.ok) return parseData(await res.text());
+            } catch(e) {}
+
+            try {
+                loadingText.innerText = "ATTEMPTING PROXY OVERRIDE (PIPELINE 2)...";
+                const res = await fetch(`https://api.allorigins.win/raw?url=${targetUrl}`);
+                if (res.ok) return parseData(await res.text());
+            } catch(e) {}
+
+            // The Ultimate Bypass: Script Injection
+            loadingText.innerText = "FIREWALL TOO STRICT. DEPLOYING SCRIPT INJECTION...";
+            const script = document.createElement('script');
+            // This forces the browser to treat the data as a trusted script
+            script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}&callback=processBibleData`;
+            script.onerror = () => {
+                loadingText.innerText = "FATAL ERROR: BROWSER BLOCKED ALL CONNECTIONS.";
+                loadingText.style.color = "#ff3333";
+            };
+            document.body.appendChild(script);
         }
 
         async function loadChapterText(bookName, chapterNum) {
@@ -332,21 +336,22 @@
             readerText.innerHTML = `<div style="color:#00ffcc; font-family:monospace;">> FETCHING SECURE TEXT...</div>`;
             
             try {
-                const query = `${bookName}+${chapterNum}`.replace(/ /g, '');
+                const query = encodeURIComponent(`${bookName} ${chapterNum}`);
                 const response = await fetch(`https://bible-api.com/${query}`);
                 const data = await response.json();
                 
                 let html = '';
                 data.verses.forEach(v => {
+                    const safeText = v.text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
                     html += `<div class="verse-block" onclick="triggerAI('${bookName}', ${chapterNum}, ${v.verse})">`;
-                    html += `<span class="verse-num">${v.verse}</span>${v.text}`;
+                    html += `<span class="verse-num">${v.verse}</span>${safeText}`;
                     html += `</div>`;
                 });
                 
                 readerText.innerHTML = html;
                 document.getElementById('reader-container').scrollTop = 0;
             } catch (err) {
-                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT. TAP TO RETRY.</div>`;
+                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT. TAP A DIFFERENT CHAPTER TO RETRY.</div>`;
                 currentlyLoadedChapter = null; 
             }
         }
@@ -358,7 +363,6 @@
             
             const bookId = Object.keys(bookMap).find(key => bookMap[key].name === book);
             const searchRef = `${bookId}.${chapter}.${verse}`;
-            
             const connections = rawConnections.filter(c => c.from === searchRef || c.to === searchRef);
             
             if (connections.length === 0) {
@@ -381,7 +385,8 @@
                     const tVerse = parts[2];
                     
                     try {
-                        const res = await fetch(`https://bible-api.com/${tBook}+${tChap}:${tVerse}`.replace(/ /g, ''));
+                        const apiQuery = encodeURIComponent(`${tBook} ${tChap}:${tVerse}`);
+                        const res = await fetch(`https://bible-api.com/${apiQuery}`);
                         const data = await res.json();
                         htmlBuild += `
                             <div class="ai-link">
@@ -456,7 +461,7 @@
             renderProgress = limit;
             
             if (renderProgress < arcs.length) {
-                loadingText.innerText = `${Math.floor((renderProgress / arcs.length) * 100)}%`;
+                loadingText.innerText = `DRAWING NETWORK: ${Math.floor((renderProgress / arcs.length) * 100)}%`;
                 requestAnimationFrame(drawBackgroundLinesIncremental);
             } else {
                 loadingText.innerText = ""; 
