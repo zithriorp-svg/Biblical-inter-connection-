@@ -53,13 +53,20 @@
             position: absolute; bottom: 110px; left: 10px;
             background-color: rgba(5, 10, 8, 0.95); border: 1px solid rgba(0, 255, 204, 0.5);
             border-radius: 6px; padding: 15px; font-family: monospace; font-size: 11px; color: #aaaaaa;
-            pointer-events: none; z-index: 20; display: flex; flex-direction: column;
+            pointer-events: auto; z-index: 20; display: flex; flex-direction: column;
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.1); transition: opacity 0.3s ease;
+            min-width: 150px;
         }
+        
+        /* New Clickable HUD Title */
         .hud-title {
             color: #00ffcc; font-size: 12px; letter-spacing: 2px;
             margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
         }
+        .hud-title:active { opacity: 0.7; }
+        .minimize-icon { font-size: 14px; margin-left: 15px; color: #00ffcc; }
+
         .hud-row { margin-bottom: 4px; }
         .hud-row span { color: #ffffff; font-weight: bold; }
         
@@ -76,12 +83,11 @@
         }
         .target-item:active { opacity: 0.5; }
 
-        /* The New Highly-Tappable Toggle Button */
         .toggle-btn {
             background: rgba(0, 255, 204, 0.1); border: 1px dashed rgba(0, 255, 204, 0.4);
             color: #00ffcc; text-align: center; padding: 8px; margin-top: 5px;
             font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s;
-            pointer-events: auto; /* Guarantees it intercepts your tap */
+            pointer-events: auto;
         }
         .toggle-btn:active { background: rgba(0, 255, 204, 0.3); }
         .toggle-btn.collapse {
@@ -135,7 +141,7 @@
         </div>
         <div id="reader-text">
             <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;" id="boot-status">
-                > BOOTING OFFLINE ENGINE...
+                > BOOTING DATABASE ENGINE...
             </div>
         </div>
     </div>
@@ -143,11 +149,16 @@
     <div id="viz-container">
         <div class="viz-title">CROSS-REFERENCE NETWORK</div>
         
-        <div class="hud-box" id="infoHud" style="opacity: 0;">
-            <div class="hud-title">NETWORK DETAILS</div>
-            <div class="hud-row" id="hudBook">ORIGIN: <span>---</span></div>
-            <div class="hud-row" id="hudLinks">LINKS: <span>---</span></div>
-            <div class="hud-targets" id="hudTargets"></div>
+        <div class="hud-box" id="infoHud" style="opacity: 0; pointer-events: none;">
+            <div class="hud-title" onclick="toggleHudMinimize()">
+                <span>NETWORK DETAILS</span>
+                <span class="minimize-icon" id="hud-minimize-icon">▼</span>
+            </div>
+            <div id="hud-content-wrapper">
+                <div class="hud-row" id="hudBook">ORIGIN: <span>---</span></div>
+                <div class="hud-row" id="hudLinks">LINKS: <span>---</span></div>
+                <div class="hud-targets" id="hudTargets"></div>
+            </div>
         </div>
 
         <canvas id="arcCanvas"></canvas>
@@ -161,6 +172,8 @@
         const bootStatus = document.getElementById('boot-status');
         
         const infoHud = document.getElementById('infoHud');
+        const hudContentWrapper = document.getElementById('hud-content-wrapper');
+        const hudMinimizeIcon = document.getElementById('hud-minimize-icon');
         const hudBook = document.getElementById('hudBook').querySelector('span');
         const hudLinks = document.getElementById('hudLinks').querySelector('span');
         const hudTargets = document.getElementById('hudTargets');
@@ -212,7 +225,8 @@
         let streamTimer = null;
         let bibleDB = null; 
         
-        let isHudExpanded = false; // State for the toggle button
+        let isHudExpanded = false; 
+        let isHudMinimized = false; // State for the entire box collapse
 
         async function mountDatabases() {
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
@@ -308,8 +322,24 @@
             if (targetGlobalIndex !== -1) jumpToChapter(targetGlobalIndex);
         }
 
+        // NEW: Toggle function for the entire HUD Box
+        window.toggleHudMinimize = function() {
+            isHudMinimized = !isHudMinimized;
+            if (isHudMinimized) {
+                hudContentWrapper.style.display = 'none';
+                hudMinimizeIcon.innerText = '▲';
+            } else {
+                hudContentWrapper.style.display = 'block';
+                hudMinimizeIcon.innerText = '▼';
+            }
+        };
+
         window.jumpToChapter = function(targetIndex) {
             isHudExpanded = false; 
+            isHudMinimized = false; // Auto-expand the box if you jump somewhere new
+            hudContentWrapper.style.display = 'block';
+            hudMinimizeIcon.innerText = '▼';
+            
             activeChapterIndex = targetIndex;
             drawInteractiveState();
             
@@ -323,12 +353,10 @@
             }, 100); 
         };
 
-        // NEW: The robust trigger function
         window.toggleHudExpanded = function() {
             isHudExpanded = !isHudExpanded;
             drawInteractiveState();
             
-            // Auto scroll to the bottom of the list when expanding
             if (isHudExpanded) {
                 setTimeout(() => {
                     hudTargets.scrollTop = hudTargets.scrollHeight;
@@ -456,7 +484,6 @@
                 hudBook.innerText = `${originNode.bName} ${originNode.ch}`;
                 hudLinks.innerText = `${activeLinks.length} DETECTED`;
                 
-                // Add the prominent toggle button
                 if (activeLinks.length > 5) {
                     if (!isHudExpanded) {
                         targetListHTML += `<div class="toggle-btn" onclick="toggleHudExpanded()">+ ${activeLinks.length - 5} MORE (TAP TO EXPAND)</div>`;
@@ -541,7 +568,12 @@
             }
 
             if (newIndex !== activeChapterIndex && newIndex !== null) {
-                isHudExpanded = false; 
+                isHudExpanded = false;
+                // Auto expand the whole box if you swipe to a new chapter
+                isHudMinimized = false; 
+                hudContentWrapper.style.display = 'block';
+                hudMinimizeIcon.innerText = '▼';
+
                 activeChapterIndex = newIndex;
                 
                 drawInteractiveState();
