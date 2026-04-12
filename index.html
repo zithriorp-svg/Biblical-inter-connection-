@@ -162,7 +162,7 @@
     </div>
 
     <div id="viz-container">
-        <div id="loadingOverlay">BYPASSING FIREWALL...</div>
+        <div id="loadingOverlay">CONNECTING TO INTERNET ARCHIVE...</div>
         <div class="hud-box" id="infoHud">
             <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
             <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
@@ -247,12 +247,18 @@
         }
         window.addEventListener('resize', resize);
 
-        // The safe data processor that prevents the phone from freezing
         function parseData(text) {
+            // Safety check in case the archive returns an HTML error page
+            if (text.trim().startsWith('<')) {
+                loadingText.innerText = "ARCHIVE SERVER OVERLOADED. PLEASE REFRESH.";
+                loadingText.style.color = "#ffaa00";
+                return;
+            }
+
             const lines = text.split('\n');
             const uniqueLinks = new Set();
             let parseIndex = 1;
-            const parseBatchSize = 1000; // Only process 1000 items at a time
+            const parseBatchSize = 1000; 
 
             function parseBatch() {
                 const limit = Math.min(parseIndex + parseBatchSize, lines.length);
@@ -292,8 +298,8 @@
                 
                 if (parseIndex < lines.length) {
                     const percent = Math.floor((parseIndex / lines.length) * 100);
-                    loadingText.innerText = `PROCESSING DATA SAFELY: ${percent}%`;
-                    requestAnimationFrame(parseBatch); // Yield to the mobile browser
+                    loadingText.innerText = `PROCESSING ARCHIVE DATA: ${percent}%`;
+                    requestAnimationFrame(parseBatch); 
                 } else {
                     isFullyLoaded = true;
                     readerTitle.innerText = "SYSTEM READY";
@@ -302,7 +308,7 @@
                 }
             }
             
-            parseBatch(); // Start the safe thinking loop
+            parseBatch(); 
         }
 
         window.processBibleData = function(data) {
@@ -315,25 +321,33 @@
         };
 
         async function fetchRealData() {
-            const targetUrl = 'https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt';
+            // The file was deleted. We use the Wayback Machine snapshot from 2023 to recover it.
+            const archiveUrl = 'https://web.archive.org/web/20230101000000if_/https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt';
 
             try {
-                loadingText.innerText = "ATTEMPTING PROXY OVERRIDE (PIPELINE 1)...";
-                const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${targetUrl}`);
-                if (res.ok) return parseData(await res.text());
+                loadingText.innerText = "RECOVERING DELETED DATA (PIPELINE 1)...";
+                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(archiveUrl)}`);
+                if (res.ok) {
+                    const text = await res.text();
+                    if (!text.trim().startsWith('<')) return parseData(text);
+                }
             } catch(e) {}
 
             try {
-                loadingText.innerText = "ATTEMPTING PROXY OVERRIDE (PIPELINE 2)...";
-                const res = await fetch(`https://api.allorigins.win/raw?url=${targetUrl}`);
-                if (res.ok) return parseData(await res.text());
+                loadingText.innerText = "RECOVERING DELETED DATA (PIPELINE 2)...";
+                const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(archiveUrl)}`);
+                if (res.ok) {
+                    const text = await res.text();
+                    if (!text.trim().startsWith('<')) return parseData(text);
+                }
             } catch(e) {}
 
-            loadingText.innerText = "FIREWALL TOO STRICT. DEPLOYING SCRIPT INJECTION...";
+            // The Ultimate Bypass: Script Injection into the Archive
+            loadingText.innerText = "DEPLOYING ARCHIVE SCRIPT INJECTION...";
             const script = document.createElement('script');
-            script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}&callback=processBibleData`;
+            script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(archiveUrl)}&callback=processBibleData`;
             script.onerror = () => {
-                loadingText.innerText = "FATAL ERROR: BROWSER BLOCKED ALL CONNECTIONS.";
+                loadingText.innerText = "FATAL ERROR: ALL PIPELINES BLOCKED.";
                 loadingText.style.color = "#ff3333";
             };
             document.body.appendChild(script);
