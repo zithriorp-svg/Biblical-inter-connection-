@@ -36,6 +36,33 @@
             font-size: 14px; letter-spacing: 4px; color: #aaaaaa; pointer-events: none;
         }
 
+        /* Upgraded Telemetry Matrix */
+        .hud-box {
+            position: absolute; bottom: 40px; left: 10px;
+            background-color: rgba(5, 10, 8, 0.9);
+            border: 1px solid rgba(0, 255, 204, 0.5);
+            border-radius: 4px; padding: 12px;
+            font-family: monospace; font-size: 11px; color: #aaaaaa;
+            pointer-events: none; max-width: 40%; max-height: 60%;
+            display: flex; flex-direction: column;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+        }
+        .hud-title {
+            color: #00ffcc; font-size: 12px; letter-spacing: 2px;
+            margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;
+        }
+        .hud-row { margin-bottom: 4px; }
+        .hud-row span { color: #ffffff; font-weight: bold; }
+        .hud-targets {
+            margin-top: 8px; overflow-y: hidden;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .target-item {
+            background: rgba(255,255,255,0.05); padding: 4px 6px;
+            border-left: 2px solid #00ffcc; color: #ddd; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+
         #ai-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 10, 5, 0.95); z-index: 100; display: none;
@@ -66,14 +93,22 @@
         <div class="reader-header" id="reader-title">SYSTEM READY</div>
         <div id="reader-text">
             <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;">
-                > OFFLINE NETWORK GENERATED.<br>
-                > SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER.
+                > NETWORK INITIALIZED.<br>
+                > SWIPE THE BOTTOM TIMELINE TO SCAN CONNECTIONS.
             </div>
         </div>
     </div>
 
     <div id="viz-container">
         <div class="viz-title">CROSS-REFERENCE NETWORK</div>
+        
+        <div class="hud-box" id="infoHud" style="opacity: 0;">
+            <div class="hud-title">NETWORK DETAILS</div>
+            <div class="hud-row" id="hudBook">ORIGIN: <span>---</span></div>
+            <div class="hud-row" id="hudLinks">LINKS: <span>---</span></div>
+            <div class="hud-targets" id="hudTargets"></div>
+        </div>
+
         <canvas id="arcCanvas"></canvas>
     </div>
 
@@ -82,6 +117,12 @@
         const ctx = canvas.getContext('2d');
         const readerTitle = document.getElementById('reader-title');
         const readerText = document.getElementById('reader-text');
+        
+        const infoHud = document.getElementById('infoHud');
+        const hudBook = document.getElementById('hudBook').querySelector('span');
+        const hudLinks = document.getElementById('hudLinks').querySelector('span');
+        const hudTargets = document.getElementById('hudTargets');
+
         const aiOverlay = document.getElementById('ai-overlay');
         const aiTitle = document.getElementById('ai-title');
         const aiResults = document.getElementById('ai-results');
@@ -123,7 +164,7 @@
         let width, height;
         let activeChapterIndex = null;
         let currentlyLoadedChapter = null;
-        let streamTimer = null; // The safety lock delay
+        let streamTimer = null;
 
         function resize() {
             const rect = document.getElementById('viz-container').getBoundingClientRect();
@@ -154,10 +195,11 @@
                 ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 1.5, 12);
             }
 
-            ctx.lineWidth = 0.5;
-
             if (activeChapterIndex === null) {
+                infoHud.style.opacity = "0"; // Hide details
+                ctx.lineWidth = 0.5;
                 ctx.globalCompositeOperation = 'lighter';
+                
                 for (let i = 0; i < arcs.length; i++) {
                     const arc = arcs[i];
                     const startX = getX(arc.start);
@@ -177,25 +219,57 @@
                 ctx.lineWidth = 1.5;
                 const activeLinks = arcs.filter(a => a.start === activeChapterIndex || a.end === activeChapterIndex);
                 
+                let targetListHTML = "";
+                let displayedTargets = 0;
+
                 for (let i = 0; i < activeLinks.length; i++) {
                     const arc = activeLinks[i];
+                    const targetIdx = (arc.start === activeChapterIndex) ? arc.end : arc.start;
+                    const targetNode = chapterNodes[targetIdx];
+                    
                     const startX = getX(arc.start);
                     const endX = getX(arc.end);
                     const distance = Math.abs(startX - endX);
                     const controlY = baselineY - (distance * 0.85); 
                     const hue = (chapterNodes[arc.start].bIndex / books.length) * 360;
                     
+                    // Draw the line
                     ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
                     ctx.beginPath();
                     ctx.moveTo(startX, baselineY);
                     ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
                     ctx.stroke();
+
+                    // Draw a glowing anchor dot on the target chapter
+                    const tX = getX(targetIdx);
+                    ctx.beginPath();
+                    ctx.arc(tX, baselineY - 2, 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+
+                    // Add to the HUD list (Limit to 5 so it doesn't overflow the screen)
+                    if (displayedTargets < 5) {
+                        targetListHTML += `<div class="target-item">> ${targetNode.bName} ${targetNode.ch}</div>`;
+                        displayedTargets++;
+                    }
                 }
 
-                const targetX = getX(activeChapterIndex);
+                // Update the Matrix HUD
+                infoHud.style.opacity = "1";
+                const originNode = chapterNodes[activeChapterIndex];
+                hudBook.innerText = `${originNode.bName} ${originNode.ch}`;
+                hudLinks.innerText = `${activeLinks.length} DETECTED`;
+                
+                if (activeLinks.length > 5) {
+                    targetListHTML += `<div style="color:#666; font-size:10px; margin-top:4px;">+ ${activeLinks.length - 5} additional nodes</div>`;
+                }
+                hudTargets.innerHTML = targetListHTML;
+
+                // Draw the main origin dot
+                const originX = getX(activeChapterIndex);
                 ctx.beginPath();
-                ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
+                ctx.arc(originX, baselineY, 6, 0, Math.PI * 2);
+                ctx.fillStyle = '#00ffcc';
                 ctx.fill();
             }
         }
@@ -270,8 +344,6 @@
             }
             
             drawInteractiveState();
-
-            // Clear the timer every time the finger moves so it doesn't spam the API
             clearTimeout(streamTimer);
 
             if (activeChapterIndex !== null) {
@@ -279,7 +351,6 @@
                 readerTitle.innerText = `${node.bName} ${node.ch}`;
                 readerText.innerHTML = `<div style="color:#666; font-family:monospace;">> LOCKING COORDINATES...</div>`;
                 
-                // Wait 600ms after the finger stops moving before asking the API for the text
                 streamTimer = setTimeout(() => {
                     loadChapterText(node.bName, node.ch);
                 }, 600);
@@ -294,7 +365,6 @@
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
         
-        // Reset chart when finger is lifted
         canvas.addEventListener('mouseup', () => { activeChapterIndex = null; drawInteractiveState(); });
         canvas.addEventListener('mouseleave', () => { activeChapterIndex = null; drawInteractiveState(); });
         canvas.addEventListener('touchend', () => { activeChapterIndex = null; drawInteractiveState(); });
