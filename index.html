@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biblical Cross-References</title>
+    <title>AI Biblical Control System</title>
     <style>
         body {
             margin: 0;
@@ -14,81 +14,173 @@
             overflow: hidden;
             width: 100vw;
             height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Top Half: The Reader */
+        #reader-container {
+            flex: 6;
+            width: 100%;
+            background-color: #0a0a0a;
+            border-bottom: 2px solid #00ffcc;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+        .reader-header {
+            font-size: 22px;
+            letter-spacing: 3px;
+            color: #00ffcc;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            background: rgba(10,10,10,0.9);
+            padding-bottom: 10px;
+        }
+        .verse-block {
+            margin-bottom: 12px;
+            line-height: 1.6;
+            font-size: 16px;
+            color: #dddddd;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .verse-block:active {
+            background-color: rgba(0, 255, 204, 0.2);
+        }
+        .verse-num {
+            color: #00ffcc;
+            font-weight: bold;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+
+        /* Bottom Half: The Visualizer */
+        #viz-container {
+            flex: 4;
+            width: 100%;
+            position: relative;
+            background-color: #050505;
             touch-action: none;
         }
-        #canvas-container {
+        canvas {
+            display: block;
             width: 100%;
             height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
         }
-        .header {
-            position: absolute;
-            top: 30px;
-            text-align: center;
-            width: 100%;
-            z-index: 10;
-            pointer-events: none;
-        }
-        .title {
-            font-size: 18px;
-            letter-spacing: 5px;
-            opacity: 0.9;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
+        
+        /* Status HUD */
         .hud-box {
             position: absolute;
-            bottom: 60px; 
-            left: 20px;
+            bottom: 40px; 
+            left: 10px;
             background-color: rgba(5, 5, 5, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(0, 255, 204, 0.3);
             border-radius: 4px;
-            padding: 12px;
+            padding: 8px;
             font-family: monospace;
-            font-size: 12px;
+            font-size: 10px;
             color: #aaaaaa;
             pointer-events: none;
-            z-index: 10;
-            backdrop-filter: blur(4px);
         }
-        .hud-row {
-            margin-bottom: 6px;
-            letter-spacing: 1px;
+        .hud-row span { color: #ffffff; font-weight: bold; }
+
+        /* AI Overlay */
+        #ai-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 10, 5, 0.95);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            backdrop-filter: blur(5px);
         }
-        .hud-row span {
+        .ai-header {
+            color: #00ffcc;
+            font-size: 20px;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #00ffcc;
+            padding-bottom: 10px;
+        }
+        .ai-content {
+            flex: 1;
+            overflow-y: auto;
             color: #ffffff;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .ai-link {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 3px solid #00ffcc;
+        }
+        .ai-link-ref { color: #00ffcc; font-weight: bold; margin-bottom: 5px;}
+        .close-btn {
+            background-color: #00ffcc;
+            color: #000;
+            text-align: center;
+            padding: 15px;
             font-weight: bold;
+            border-radius: 4px;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        #loadingOverlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-family: monospace; font-size: 14px; color: #00ffcc; z-index: 20;
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="title">BIBLICAL CROSS-REFERENCES</div>
-    </div>
-    
-    <div class="hud-box" id="infoHud">
-        <div class="hud-row" id="hudStatus">STATUS: <span>CONNECTING...</span></div>
-        <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
-        <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
-        <div class="hud-row" id="hudLinks">LINKS: <span>---</span></div>
+    <div id="ai-overlay">
+        <div class="ai-header" id="ai-title">AI ANALYSIS</div>
+        <div class="ai-content" id="ai-results">Loading deep network connections...</div>
+        <div class="close-btn" onclick="closeAI()">CLOSE SYSTEM</div>
     </div>
 
-    <div id="canvas-container">
+    <div id="reader-container">
+        <div class="reader-header" id="reader-title">INITIALIZING...</div>
+        <div id="reader-text">
+            <div style="color: #666; font-family: monospace; margin-top: 20px;">
+                > SYSTEM BOOTING...<br>
+                > DOWNLOADING TEXT DATABASE...<br>
+                > AWAITING TIMELINE SELECTION...
+            </div>
+        </div>
+    </div>
+
+    <div id="viz-container">
+        <div id="loadingOverlay">DOWNLOADING NETWORK...</div>
+        <div class="hud-box" id="infoHud">
+            <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
+            <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
+        </div>
         <canvas id="arcCanvas"></canvas>
     </div>
 
     <script>
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
-        
-        const hudStatus = document.getElementById('hudStatus').querySelector('span');
+        const loadingText = document.getElementById('loadingOverlay');
         const hudBook = document.getElementById('hudBook').querySelector('span');
         const hudChap = document.getElementById('hudChap').querySelector('span');
-        const hudLinks = document.getElementById('hudLinks').querySelector('span');
+        
+        const readerTitle = document.getElementById('reader-title');
+        const readerText = document.getElementById('reader-text');
+        const aiOverlay = document.getElementById('ai-overlay');
+        const aiTitle = document.getElementById('ai-title');
+        const aiResults = document.getElementById('ai-results');
 
         let width, height;
         
@@ -131,48 +223,64 @@
 
         const arcs = [];
         const chapterArcs = Array.from({length: totalChapters}, () => []);
+        const rawConnections = []; // Stores text strings of connections
+        
         let activeChapterIndex = null;
+        let isFullyLoaded = false;
+        let renderProgress = 0;
+        let currentlyLoadedChapter = null;
 
         function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
+            width = document.getElementById('viz-container').clientWidth;
+            height = document.getElementById('viz-container').clientHeight;
             canvas.width = width;
             canvas.height = height;
-            if (arcs.length > 0) drawInstantly();
+            
+            if (isFullyLoaded && activeChapterIndex === null) {
+                renderProgress = 0;
+                ctx.clearRect(0, 0, width, height);
+                drawBackgroundLinesIncremental();
+            } else if (isFullyLoaded) {
+                drawInteractiveState();
+            }
         }
 
         window.addEventListener('resize', resize);
 
-        async function loadRealData() {
+        async function fetchRealData() {
             try {
-                hudStatus.innerText = "DOWNLOADING REAL DATA...";
+                loadingText.innerText = "LINKING 63,000 NODES...";
                 const response = await fetch('https://raw.githubusercontent.com/andrewgiessel/openbible-data/master/cross_references.txt');
                 const text = await response.text();
-                
                 const lines = text.split('\n');
-                hudStatus.innerText = "OPTIMIZING FOR MOBILE...";
-
+                
+                loadingText.innerText = "OPTIMIZING...";
                 const uniqueLinks = new Set();
 
                 for (let i = 1; i < lines.length; i++) {
                     const parts = lines[i].split('\t');
                     if (parts.length >= 2) {
-                        const fromRef = parts[0].split('.');
-                        const toRef = parts[1].split('.');
+                        const fromRef = parts[0];
+                        const toRef = parts[1];
                         
-                        const b1 = bookMap[fromRef[0]];
-                        const b2 = bookMap[toRef[0]];
+                        const fromSplit = fromRef.split('.');
+                        const toSplit = toRef.split('.');
+                        
+                        const b1 = bookMap[fromSplit[0]];
+                        const b2 = bookMap[toSplit[0]];
                         
                         if (b1 && b2) {
-                            const c1 = b1.startCh + (parseInt(fromRef[1]) - 1);
-                            const c2 = b2.startCh + (parseInt(toRef[1]) - 1);
+                            const c1 = b1.startCh + (parseInt(fromSplit[1]) - 1);
+                            const c2 = b2.startCh + (parseInt(toSplit[1]) - 1);
                             
+                            // Save raw string for AI analysis
+                            rawConnections.push({ from: fromRef, to: toRef });
+
                             if (c1 !== c2 && c1 < totalChapters && c2 < totalChapters) {
                                 const linkKey = c1 < c2 ? `${c1}-${c2}` : `${c2}-${c1}`;
-                                
                                 if (!uniqueLinks.has(linkKey)) {
                                     uniqueLinks.add(linkKey);
-                                    const arc = { start: c1, end: c2, book1: b1.index, book2: b2.index };
+                                    const arc = { start: c1, end: c2, book1: b1.index };
                                     arcs.push(arc);
                                     chapterArcs[c1].push(arc);
                                     chapterArcs[c2].push(arc);
@@ -182,101 +290,204 @@
                     }
                 }
                 
-                hudStatus.innerText = "SYSTEM READY: DRAG RAINBOW BAR";
-                hudStatus.style.color = "#00ffcc";
-                
-                drawInstantly();
+                isFullyLoaded = true;
+                readerTitle.innerText = "SYSTEM READY";
+                readerText.innerHTML = "<div style='color:#00ffcc; font-family:monospace;'>> SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER</div>";
+                drawBackgroundLinesIncremental();
 
             } catch (err) {
-                hudStatus.innerText = "ERROR LOADING DATA";
-                hudStatus.style.color = "#ff3333";
+                loadingText.innerText = "NETWORK ERROR";
+                loadingText.style.color = "#ff3333";
             }
         }
 
+        // ---- BIBLE API FETCHING ----
+        async function loadChapterText(bookName, chapterNum) {
+            if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) return;
+            currentlyLoadedChapter = `${bookName} ${chapterNum}`;
+            
+            readerTitle.innerText = `${bookName} ${chapterNum}`;
+            readerText.innerHTML = `<div style="color:#00ffcc; font-family:monospace;">> FETCHING SECURE TEXT...</div>`;
+            
+            try {
+                // Using free Bible API
+                const query = `${bookName}+${chapterNum}`.replace(/ /g, '');
+                const response = await fetch(`https://bible-api.com/${query}`);
+                const data = await response.json();
+                
+                let html = '';
+                data.verses.forEach(v => {
+                    html += `<div class="verse-block" onclick="triggerAI('${bookName}', ${chapterNum}, ${v.verse}, '${v.text.replace(/'/g, "\\'")}')">`;
+                    html += `<span class="verse-num">${v.verse}</span>${v.text}`;
+                    html += `</div>`;
+                });
+                
+                readerText.innerHTML = html;
+                document.getElementById('reader-container').scrollTop = 0;
+            } catch (err) {
+                readerText.innerHTML = `<div style="color:#ff3333;">ERROR DOWNLOADING TEXT.</div>`;
+            }
+        }
+
+        // ---- AI OVERLAY SIMULATION ----
+        async function triggerAI(book, chapter, verse, text) {
+            aiOverlay.style.display = "flex";
+            aiTitle.innerText = `ANALYZING: ${book} ${chapter}:${verse}`;
+            aiResults.innerHTML = `<div style="color:#00ffcc; font-family:monospace; margin-bottom:20px;">> RUNNING CROSS-REFERENCE ALGORITHM...</div>`;
+            
+            // Find the ID format used in the dataset (e.g. Genesis -> Gen)
+            const bookId = Object.keys(bookMap).find(key => bookMap[key].name === book);
+            const searchRef = `${bookId}.${chapter}.${verse}`;
+            
+            // Find all matching targets in the raw data
+            const connections = rawConnections.filter(c => c.from === searchRef || c.to === searchRef);
+            
+            if (connections.length === 0) {
+                aiResults.innerHTML += `<div>No critical hyper-links detected for this specific node.</div>`;
+                return;
+            }
+
+            aiResults.innerHTML += `<div style="margin-bottom: 15px;">Identified <b>${connections.length}</b> structural links. Fetching texts...</div>`;
+            
+            // Limit to 5 so we don't overload the free API
+            const maxToFetch = Math.min(connections.length, 5);
+            let htmlBuild = "";
+
+            for(let i=0; i < maxToFetch; i++) {
+                const targetRefStr = connections[i].from === searchRef ? connections[i].to : connections[i].from;
+                const parts = targetRefStr.split('.'); // [Book, Chap, Verse]
+                
+                if(parts.length === 3) {
+                    const tBook = bookMap[parts[0]].name;
+                    const tChap = parts[1];
+                    const tVerse = parts[2];
+                    
+                    try {
+                        const res = await fetch(`https://bible-api.com/${tBook}+${tChap}:${tVerse}`.replace(/ /g, ''));
+                        const data = await res.json();
+                        htmlBuild += `
+                            <div class="ai-link">
+                                <div class="ai-link-ref">${tBook} ${tChap}:${tVerse}</div>
+                                <div>"${data.verses[0].text.trim()}"</div>
+                            </div>
+                        `;
+                    } catch(e) {}
+                }
+            }
+
+            if (connections.length > 5) {
+                htmlBuild += `<div style="color:#aaa; font-size:12px; font-family:monospace;">> + ${connections.length - 5} MORE LINKS IN DEEP STORAGE...</div>`;
+            }
+
+            aiResults.innerHTML = htmlBuild;
+        }
+
+        function closeAI() {
+            aiOverlay.style.display = "none";
+        }
+
+        // ---- CANVAS DRAWING LOGIC ----
         function getX(index) {
-            const margin = 20;
+            const margin = 15;
             return margin + (index / (totalChapters - 1)) * (width - margin * 2);
         }
 
-        function drawInstantly() {
-            const baselineY = height - 80;
-            ctx.clearRect(0, 0, width, height);
-
-            // Draw the rainbow timeline bar at the bottom
+        function drawBottomBar() {
+            const baselineY = height - 20;
             for (let i = 0; i < totalChapters; i++) {
                 const hue = (chapterNodes[i].bookIndex / books.length) * 360;
                 if (activeChapterIndex !== null && i !== activeChapterIndex) {
                     ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
+                    ctx.fillRect(getX(i) - 0.5, baselineY, 1.5, 10);
                 } else {
                     ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 15);
                 }
-                ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 1.5, 15);
-            }
-
-            if (activeChapterIndex === null) {
-                // MOBILE OPTIMIZER: Safely draw ~2,500 real lines so the phone doesn't crash
-                ctx.lineWidth = 0.5;
-                const safeStep = Math.max(1, Math.floor(arcs.length / 2500)); 
-
-                for (let i = 0; i < arcs.length; i += safeStep) {
-                    const arc = arcs[i];
-                    const startX = getX(arc.start);
-                    const endX = getX(arc.end);
-                    const distance = Math.abs(startX - endX);
-                    const controlY = baselineY - (distance * 0.9); 
-                    const hue = (arc.book1 / books.length) * 360;
-                    
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.25)`; 
-                    ctx.beginPath();
-                    ctx.moveTo(startX, baselineY);
-                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
-                    ctx.stroke();
-                }
-                
-                hudBook.innerText = "---";
-                hudChap.innerText = "---";
-                hudLinks.innerText = "---";
-            } 
-            else {
-                // WHEN TOUCHED: Draw 100% of the true, real connections for that exact chapter
-                const activeLinks = chapterArcs[activeChapterIndex] || [];
-                ctx.lineWidth = 1.2;
-
-                for (let i = 0; i < activeLinks.length; i++) {
-                    const arc = activeLinks[i];
-                    const startX = getX(arc.start);
-                    const endX = getX(arc.end);
-                    const distance = Math.abs(startX - endX);
-                    const controlY = baselineY - (distance * 0.9); 
-                    const hue = (arc.book1 / books.length) * 360;
-                    
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.8)`;
-                    ctx.beginPath();
-                    ctx.moveTo(startX, baselineY);
-                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
-                    ctx.stroke();
-                }
-
-                // Draw the white targeting dot where your finger is
-                const targetX = getX(activeChapterIndex);
-                ctx.beginPath();
-                ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                
-                // Update the HUD with real biblical data
-                const node = chapterNodes[activeChapterIndex];
-                hudBook.innerText = node.bookName;
-                hudChap.innerText = node.localCh;
-                hudLinks.innerText = activeLinks.length;
             }
         }
 
+        function drawBackgroundLinesIncremental() {
+            if (activeChapterIndex !== null) return; 
+            if (renderProgress === 0) {
+                ctx.clearRect(0, 0, width, height);
+                drawBottomBar();
+            }
+
+            const baselineY = height - 20;
+            const batchSize = 500; 
+            const limit = Math.min(renderProgress + batchSize, arcs.length);
+            
+            ctx.lineWidth = 0.5;
+            ctx.globalCompositeOperation = 'lighter'; 
+
+            for (let i = renderProgress; i < limit; i++) {
+                const arc = arcs[i];
+                const startX = getX(arc.start);
+                const endX = getX(arc.end);
+                const distance = Math.abs(startX - endX);
+                const controlY = baselineY - (distance * 0.9); 
+                const hue = (arc.book1 / books.length) * 360;
+                
+                ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.05)`; 
+                ctx.beginPath();
+                ctx.moveTo(startX, baselineY);
+                ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                ctx.stroke();
+            }
+            
+            ctx.globalCompositeOperation = 'source-over'; 
+            renderProgress = limit;
+            
+            if (renderProgress < arcs.length) {
+                loadingText.innerText = `${Math.floor((renderProgress / arcs.length) * 100)}%`;
+                requestAnimationFrame(drawBackgroundLinesIncremental);
+            } else {
+                loadingText.innerText = ""; 
+            }
+        }
+
+        function drawInteractiveState() {
+            ctx.clearRect(0, 0, width, height);
+            drawBottomBar();
+
+            const baselineY = height - 20;
+            const activeLinks = chapterArcs[activeChapterIndex] || [];
+            
+            ctx.lineWidth = 1.0;
+            for (let i = 0; i < activeLinks.length; i++) {
+                const arc = activeLinks[i];
+                const startX = getX(arc.start);
+                const endX = getX(arc.end);
+                const distance = Math.abs(startX - endX);
+                const controlY = baselineY - (distance * 0.9); 
+                const hue = (arc.book1 / books.length) * 360;
+                
+                ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.8)`;
+                ctx.beginPath();
+                ctx.moveTo(startX, baselineY);
+                ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                ctx.stroke();
+            }
+
+            const targetX = getX(activeChapterIndex);
+            ctx.beginPath();
+            ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            
+            const node = chapterNodes[activeChapterIndex];
+            hudBook.innerText = node.bookName;
+            hudChap.innerText = node.localCh;
+            
+            // Trigger text load
+            loadChapterText(node.bookName, node.localCh);
+        }
+
         function handleInteraction(event) {
-            if (arcs.length === 0) return;
+            if (!isFullyLoaded) return;
             const rect = canvas.getBoundingClientRect();
             let clientX = event.touches && event.touches.length > 0 ? event.touches[0].clientX : event.clientX;
-            const margin = 20;
+            const margin = 15;
             const percentage = (clientX - rect.left - margin) / (width - margin * 2);
             
             if (percentage >= 0 && percentage <= 1) {
@@ -284,26 +495,30 @@
             } else {
                 activeChapterIndex = null; 
             }
-            drawInstantly();
-        }
 
-        function resetInteraction() {
-            activeChapterIndex = null;
-            drawInstantly();
+            loadingText.innerText = ""; 
+
+            if (activeChapterIndex !== null) {
+                drawInteractiveState();
+            } else {
+                renderProgress = 0;
+                hudBook.innerText = "---";
+                hudChap.innerText = "---";
+                drawBackgroundLinesIncremental();
+            }
         }
 
         canvas.addEventListener('mousedown', handleInteraction);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
-        canvas.addEventListener('mouseup', resetInteraction);
-        canvas.addEventListener('mouseleave', resetInteraction);
-        
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
-        canvas.addEventListener('touchend', resetInteraction);
+        canvas.addEventListener('mouseup', () => { activeChapterIndex = null; handleInteraction(event); });
+        canvas.addEventListener('mouseleave', () => { activeChapterIndex = null; handleInteraction(event); });
+        canvas.addEventListener('touchend', () => { activeChapterIndex = null; handleInteraction(event); });
 
-        resize();
-        loadRealData();
+        // Initialize
+        setTimeout(resize, 100);
+        fetchRealData();
     </script>
 </body>
 </html>
-
