@@ -65,10 +65,10 @@
         .hud-targets { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: auto; }
         
         .target-item {
-            background: rgba(255,255,255,0.05); padding: 5px 8px; border-left: 2px solid transparent;
-            color: #dddddd; white-space: nowrap; cursor: pointer; transition: background 0.2s ease;
+            padding: 5px 8px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;
+            font-weight: bold; border-left: 3px solid transparent; border-radius: 2px;
         }
-        .target-item:active { background: rgba(255, 255, 255, 0.3) !important; color: #ffffff !important; }
+        .target-item:active { opacity: 0.5; }
 
         .overlay-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -305,6 +305,20 @@
             ctx.clearRect(0, 0, width, height);
             const baselineY = height - 90; 
 
+            // Pre-calculate which books need to light up so the timeline text can glow
+            let activeLinks = [];
+            let linkedBookIndices = new Map();
+            
+            if (activeChapterIndex !== null) {
+                activeLinks = arcs.filter(a => a.start === activeChapterIndex || a.end === activeChapterIndex);
+                activeLinks.forEach(arc => {
+                    const targetIdx = (arc.start === activeChapterIndex) ? arc.end : arc.start;
+                    const targetBookIdx = chapterNodes[targetIdx].bIndex;
+                    const arcHue = (chapterNodes[arc.start].bIndex / books.length) * 360;
+                    linkedBookIndices.set(targetBookIdx, arcHue);
+                });
+            }
+
             for (let i = 0; i < totalChapters; i++) {
                 const hue = (chapterNodes[i].bIndex / books.length) * 360;
                 if (activeChapterIndex !== null && i !== activeChapterIndex) {
@@ -323,6 +337,12 @@
                         ctx.fillStyle = "#00ffcc";
                         ctx.font = "bold 11px monospace";
                         ctx.fillText(chapterNodes[i].bName.toUpperCase(), 0, 3);
+                    } else if (activeChapterIndex !== null && linkedBookIndices.has(chapterNodes[i].bIndex)) {
+                        // THIS MAKES THE VERTICAL BOOK NAMES GLOW!
+                        const matchHue = linkedBookIndices.get(chapterNodes[i].bIndex);
+                        ctx.fillStyle = `hsl(${matchHue}, 100%, 75%)`;
+                        ctx.font = "bold 10px monospace";
+                        ctx.fillText(chapterNodes[i].bName.substring(0, 3).toUpperCase(), 0, 3);
                     } else {
                         ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
                         ctx.font = "8px monospace";
@@ -355,7 +375,6 @@
                 ctx.globalCompositeOperation = 'source-over';
             } else {
                 ctx.lineWidth = 1.5;
-                const activeLinks = arcs.filter(a => a.start === activeChapterIndex || a.end === activeChapterIndex);
                 
                 let targetListHTML = "";
                 let displayedTargets = 0;
@@ -369,9 +388,9 @@
                     const endX = getX(arc.end);
                     const distance = Math.abs(startX - endX);
                     const controlY = baselineY - (distance * 0.85); 
-                    const hue = (chapterNodes[arc.start].bIndex / books.length) * 360;
+                    const arcHue = (chapterNodes[arc.start].bIndex / books.length) * 360;
                     
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
+                    ctx.strokeStyle = `hsla(${arcHue}, 100%, 70%, 0.7)`;
                     ctx.beginPath();
                     ctx.moveTo(startX, baselineY);
                     ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
@@ -384,14 +403,14 @@
                     ctx.fill();
 
                     if (displayedTargets < 5) {
-                        // --- DYNAMIC BOOK COLORING ---
-                        // We calculate the color for the target book specifically.
-                        const targetHue = (books[targetNode.bIndex].bIndex / books.length) * 360;
-                        const bookColor = `hsl(${targetHue}, 100%, 70%)`;
-                        
+                        // THIS MAKES THE MATRIX DETAILS LIST GLOW!
                         targetListHTML += `
-                            <div class="target-item" onclick="jumpToChapter(${targetIdx})">
-                                > <span style="color: ${bookColor} !important">${targetNode.bName}</span> ${targetNode.ch}
+                            <div class="target-item" 
+                                 style="color: hsl(${arcHue}, 100%, 80%); 
+                                        border-left-color: hsl(${arcHue}, 100%, 50%); 
+                                        background-color: hsla(${arcHue}, 100%, 50%, 0.1);" 
+                                 onclick="jumpToChapter(${targetIdx})">
+                                 > ${targetNode.bName} ${targetNode.ch}
                             </div>
                         `;
                         displayedTargets++;
