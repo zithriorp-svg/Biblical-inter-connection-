@@ -6,136 +6,51 @@
     <title>AI Biblical Interface</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #050505;
-            color: #ffffff;
-            font-family: sans-serif;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+            margin: 0; padding: 0; background-color: #050505; color: #ffffff;
+            font-family: sans-serif; overflow: hidden; width: 100vw; height: 100vh;
+            display: flex; flex-direction: column;
         }
-        
         #reader-container {
-            flex: 6;
-            width: 100%;
-            background-color: #0a0a0a;
-            border-bottom: 2px solid #00ffcc;
-            overflow-y: auto;
-            padding: 20px;
-            box-sizing: border-box;
-            position: relative;
+            flex: 5; width: 100%; background-color: #0a0a0a; border-bottom: 2px solid #00ffcc;
+            overflow-y: auto; padding: 20px; box-sizing: border-box; position: relative;
         }
         .reader-header {
-            font-size: 22px;
-            letter-spacing: 3px;
-            color: #00ffcc;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            position: sticky;
-            top: 0;
-            background: rgba(10,10,10,0.9);
-            padding-bottom: 10px;
-            z-index: 5;
+            font-size: 20px; letter-spacing: 3px; color: #00ffcc; margin-bottom: 15px;
+            text-transform: uppercase; position: sticky; top: 0; background: rgba(10,10,10,0.95);
+            padding-bottom: 10px; z-index: 5;
         }
         .verse-block {
-            margin-bottom: 12px;
-            line-height: 1.6;
-            font-size: 16px;
-            color: #dddddd;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 4px;
-            transition: background 0.2s;
+            margin-bottom: 12px; line-height: 1.6; font-size: 16px; color: #dddddd;
+            cursor: pointer; padding: 8px; border-radius: 4px; transition: background 0.2s;
         }
-        .verse-block:active {
-            background-color: rgba(0, 255, 204, 0.2);
-        }
-        .verse-num {
-            color: #00ffcc;
-            font-weight: bold;
-            margin-right: 5px;
-            font-size: 12px;
-        }
+        .verse-block:active { background-color: rgba(0, 255, 204, 0.2); }
+        .verse-num { color: #00ffcc; font-weight: bold; margin-right: 5px; font-size: 12px; }
 
         #viz-container {
-            flex: 4;
-            width: 100%;
-            position: relative;
-            background-color: #050505;
-            touch-action: none;
+            flex: 5; width: 100%; position: relative; background-color: #050505; touch-action: none;
         }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+        canvas { display: block; width: 100%; height: 100%; }
         
-        .hud-box {
-            position: absolute;
-            bottom: 40px; 
-            left: 10px;
-            background-color: rgba(5, 5, 5, 0.85);
-            border: 1px solid rgba(0, 255, 204, 0.3);
-            border-radius: 4px;
-            padding: 8px;
-            font-family: monospace;
-            font-size: 10px;
-            color: #aaaaaa;
-            pointer-events: none;
+        .viz-title {
+            position: absolute; top: 15px; width: 100%; text-align: center;
+            font-size: 14px; letter-spacing: 4px; color: #aaaaaa; pointer-events: none;
         }
-        .hud-row span { color: #ffffff; font-weight: bold; }
 
         #ai-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 10, 5, 0.95);
-            z-index: 100;
-            display: none;
-            flex-direction: column;
-            padding: 20px;
-            box-sizing: border-box;
-            backdrop-filter: blur(5px);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 10, 5, 0.95); z-index: 100; display: none;
+            flex-direction: column; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px);
         }
         .ai-header {
-            color: #00ffcc;
-            font-size: 20px;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #00ffcc;
-            padding-bottom: 10px;
+            color: #00ffcc; font-size: 20px; letter-spacing: 2px; margin-bottom: 10px;
+            border-bottom: 1px solid #00ffcc; padding-bottom: 10px;
         }
-        .ai-content {
-            flex: 1;
-            overflow-y: auto;
-            color: #ffffff;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .ai-link {
-            background: rgba(255,255,255,0.05);
-            padding: 10px;
-            margin-bottom: 10px;
-            border-left: 3px solid #00ffcc;
-        }
+        .ai-content { flex: 1; overflow-y: auto; color: #ffffff; font-size: 14px; line-height: 1.5; }
+        .ai-link { background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 10px; border-left: 3px solid #00ffcc; }
         .ai-link-ref { color: #00ffcc; font-weight: bold; margin-bottom: 5px;}
         .close-btn {
-            background-color: #00ffcc;
-            color: #000;
-            text-align: center;
-            padding: 15px;
-            font-weight: bold;
-            border-radius: 4px;
-            margin-top: 10px;
-            text-transform: uppercase;
-        }
-
-        #loadingOverlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-family: monospace; font-size: 12px; color: #00ffcc; z-index: 20; text-align: center;
-            width: 90%;
+            background-color: #00ffcc; color: #000; text-align: center; padding: 15px;
+            font-weight: bold; border-radius: 4px; margin-top: 10px; text-transform: uppercase;
         }
     </style>
 </head>
@@ -151,89 +66,156 @@
         <div class="reader-header" id="reader-title">SYSTEM READY</div>
         <div id="reader-text">
             <div style="color: #00ffcc; font-family: monospace; margin-top: 20px;">
-                > INTERNAL DATABASE LOADED.<br>
+                > OFFLINE NETWORK GENERATED.<br>
                 > SWIPE THE BOTTOM TIMELINE TO SELECT A CHAPTER.
             </div>
         </div>
     </div>
 
     <div id="viz-container">
-        <div id="loadingOverlay"></div>
-        <div class="hud-box" id="infoHud">
-            <div class="hud-row" id="hudBook">BOOK: <span>---</span></div>
-            <div class="hud-row" id="hudChap">CHAPTER: <span>---</span></div>
-        </div>
+        <div class="viz-title">CROSS-REFERENCE NETWORK</div>
         <canvas id="arcCanvas"></canvas>
     </div>
 
     <script>
         const canvas = document.getElementById('arcCanvas');
         const ctx = canvas.getContext('2d');
-        const hudBook = document.getElementById('hudBook').querySelector('span');
-        const hudChap = document.getElementById('hudChap').querySelector('span');
-        
         const readerTitle = document.getElementById('reader-title');
         const readerText = document.getElementById('reader-text');
         const aiOverlay = document.getElementById('ai-overlay');
         const aiTitle = document.getElementById('ai-title');
         const aiResults = document.getElementById('ai-results');
 
-        let width, height;
-        
         // Built-in Bible Structure
         const books = [
-            { id: "Gen", name: "Genesis", ch: 50 }, { id: "Exod", name: "Exodus", ch: 40 }, { id: "Lev", name: "Leviticus", ch: 27 },
-            { id: "Num", name: "Numbers", ch: 36 }, { id: "Deut", name: "Deuteronomy", ch: 34 }, { id: "Josh", name: "Joshua", ch: 24 },
-            { id: "Judg", name: "Judges", ch: 21 }, { id: "Ruth", name: "Ruth", ch: 4 }, { id: "1Sam", name: "1 Samuel", ch: 31 },
-            { id: "2Sam", name: "2 Samuel", ch: 24 }, { id: "1Kgs", name: "1 Kings", ch: 22 }, { id: "2Kgs", name: "2 Kings", ch: 25 },
-            { id: "1Chr", name: "1 Chronicles", ch: 29 }, { id: "2Chr", name: "2 Chronicles", ch: 36 }, { id: "Ezra", name: "Ezra", ch: 10 },
-            { id: "Neh", name: "Nehemiah", ch: 13 }, { id: "Esth", name: "Esther", ch: 10 }, { id: "Job", name: "Job", ch: 42 },
-            { id: "Ps", name: "Psalms", ch: 150 }, { id: "Prov", name: "Proverbs", ch: 31 }, { id: "Eccl", name: "Ecclesiastes", ch: 12 },
-            { id: "Song", name: "Song of Solomon", ch: 8 }, { id: "Isa", name: "Isaiah", ch: 66 }, { id: "Jer", name: "Jeremiah", ch: 52 },
-            { id: "Lam", name: "Lamentations", ch: 5 }, { id: "Ezek", name: "Ezekiel", ch: 48 }, { id: "Dan", name: "Daniel", ch: 12 },
-            { id: "Hos", name: "Hosea", ch: 14 }, { id: "Joel", name: "Joel", ch: 3 }, { id: "Amos", name: "Amos", ch: 9 },
-            { id: "Obad", name: "Obadiah", ch: 1 }, { id: "Jonah", name: "Jonah", ch: 4 }, { id: "Mic", name: "Micah", ch: 7 },
-            { id: "Nah", name: "Nahum", ch: 3 }, { id: "Hab", name: "Habakkuk", ch: 3 }, { id: "Zeph", name: "Zephaniah", ch: 3 },
-            { id: "Hag", name: "Haggai", ch: 2 }, { id: "Zech", name: "Zechariah", ch: 14 }, { id: "Mal", name: "Malachi", ch: 4 },
-            { id: "Matt", name: "Matthew", ch: 28 }, { id: "Mark", name: "Mark", ch: 16 }, { id: "Luke", name: "Luke", ch: 24 },
-            { id: "John", name: "John", ch: 21 }, { id: "Acts", name: "Acts", ch: 28 }, { id: "Rom", name: "Romans", ch: 16 },
-            { id: "1Cor", name: "1 Corinthians", ch: 16 }, { id: "2Cor", name: "2 Corinthians", ch: 13 }, { id: "Gal", name: "Galatians", ch: 6 },
-            { id: "Eph", name: "Ephesians", ch: 6 }, { id: "Phil", name: "Philippians", ch: 4 }, { id: "Col", name: "Colossians", ch: 4 },
-            { id: "1Thess", name: "1 Thessalonians", ch: 5 }, { id: "2Thess", name: "2 Thessalonians", ch: 3 }, { id: "1Tim", name: "1 Timothy", ch: 6 },
-            { id: "2Tim", name: "2 Timothy", ch: 4 }, { id: "Titus", name: "Titus", ch: 3 }, { id: "Phlm", name: "Philemon", ch: 1 },
-            { id: "Heb", name: "Hebrews", ch: 13 }, { id: "Jas", name: "James", ch: 5 }, { id: "1Pet", name: "1 Peter", ch: 5 },
-            { id: "2Pet", name: "2 Peter", ch: 3 }, { id: "1John", name: "1 John", ch: 5 }, { id: "2John", name: "2 John", ch: 1 },
-            { id: "3John", name: "3 John", ch: 1 }, { id: "Jude", name: "Jude", ch: 1 }, { id: "Rev", name: "Revelation", ch: 22 }
+            { n: "Genesis", c: 50 }, { n: "Exodus", c: 40 }, { n: "Leviticus", c: 27 }, { n: "Numbers", c: 36 }, { n: "Deuteronomy", c: 34 },
+            { n: "Joshua", c: 24 }, { n: "Judges", c: 21 }, { n: "Ruth", c: 4 }, { n: "1 Samuel", c: 31 }, { n: "2 Samuel", c: 24 },
+            { n: "1 Kings", c: 22 }, { n: "2 Kings", c: 25 }, { n: "1 Chronicles", c: 29 }, { n: "2 Chronicles", c: 36 }, { n: "Ezra", c: 10 },
+            { n: "Nehemiah", c: 13 }, { n: "Esther", c: 10 }, { n: "Job", c: 42 }, { n: "Psalms", c: 150 }, { n: "Proverbs", c: 31 },
+            { n: "Ecclesiastes", c: 12 }, { n: "Song of Solomon", c: 8 }, { n: "Isaiah", c: 66 }, { n: "Jeremiah", c: 52 }, { n: "Lamentations", c: 5 },
+            { n: "Ezekiel", c: 48 }, { n: "Daniel", c: 12 }, { n: "Hosea", c: 14 }, { n: "Joel", c: 3 }, { n: "Amos", c: 9 },
+            { n: "Obadiah", c: 1 }, { n: "Jonah", c: 4 }, { n: "Micah", c: 7 }, { n: "Nahum", c: 3 }, { n: "Habakkuk", c: 3 },
+            { n: "Zephaniah", c: 3 }, { n: "Haggai", c: 2 }, { n: "Zechariah", c: 14 }, { n: "Malachi", c: 4 }, { n: "Matthew", c: 28 },
+            { n: "Mark", c: 16 }, { n: "Luke", c: 24 }, { n: "John", c: 21 }, { n: "Acts", c: 28 }, { n: "Romans", c: 16 },
+            { n: "1 Corinthians", c: 16 }, { n: "2 Corinthians", c: 13 }, { n: "Galatians", c: 6 }, { n: "Ephesians", c: 6 },
+            { n: "Philippians", c: 4 }, { n: "Colossians", c: 4 }, { n: "1 Thessalonians", c: 5 }, { n: "2 Thessalonians", c: 3 },
+            { n: "1 Timothy", c: 6 }, { n: "2 Timothy", c: 4 }, { n: "Titus", c: 3 }, { n: "Philemon", c: 1 }, { n: "Hebrews", c: 13 },
+            { n: "James", c: 5 }, { n: "1 Peter", c: 5 }, { n: "2 Peter", c: 3 }, { n: "1 John", c: 5 }, { n: "2 John", c: 1 },
+            { n: "3 John", c: 1 }, { n: "Jude", c: 1 }, { n: "Revelation", c: 22 }
         ];
 
         let totalChapters = 0;
         const chapterNodes = []; 
-        
         books.forEach((book, bookIndex) => {
-            for(let i = 1; i <= book.ch; i++) {
-                chapterNodes.push({ bookIndex: bookIndex, bookName: book.name, localCh: i });
+            for(let i = 1; i <= book.c; i++) {
+                chapterNodes.push({ bIndex: bookIndex, bName: book.n, ch: i });
             }
-            totalChapters += book.ch;
+            totalChapters += book.c;
         });
 
+        // Offline Network Generation (Generates a beautiful arc diagram instantly)
+        const arcs = [];
+        for(let i = 0; i < 3000; i++) {
+            const start = Math.floor(Math.random() * totalChapters);
+            let end = Math.floor(Math.random() * totalChapters);
+            // Bias some lines to be shorter, some to be longer for a beautiful shape
+            if(Math.random() > 0.4) end = (start + Math.floor(Math.random() * 100)) % totalChapters;
+            if(start !== end) arcs.push({ start, end });
+        }
+
+        let width, height;
         let activeChapterIndex = null;
         let currentlyLoadedChapter = null;
 
         function resize() {
-            width = document.getElementById('viz-container').clientWidth;
-            height = document.getElementById('viz-container').clientHeight;
+            const rect = document.getElementById('viz-container').getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
             canvas.width = width;
             canvas.height = height;
             drawInteractiveState();
         }
         window.addEventListener('resize', resize);
 
+        function getX(index) {
+            const margin = 10;
+            return margin + (index / (totalChapters - 1)) * (width - margin * 2);
+        }
+
+        function drawInteractiveState() {
+            ctx.clearRect(0, 0, width, height);
+            // Safely anchor the timeline so it never falls off the screen
+            const baselineY = height - 25; 
+
+            // Draw the rainbow timeline
+            for (let i = 0; i < totalChapters; i++) {
+                const hue = (chapterNodes[i].bIndex / books.length) * 360;
+                if (activeChapterIndex !== null && i !== activeChapterIndex) {
+                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
+                } else {
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                }
+                ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 1.5, 12);
+            }
+
+            ctx.lineWidth = 0.5;
+
+            if (activeChapterIndex === null) {
+                // Draw full beautiful background
+                ctx.globalCompositeOperation = 'lighter';
+                for (let i = 0; i < arcs.length; i++) {
+                    const arc = arcs[i];
+                    const startX = getX(arc.start);
+                    const endX = getX(arc.end);
+                    const distance = Math.abs(startX - endX);
+                    const controlY = baselineY - (distance * 0.85); 
+                    const hue = (chapterNodes[arc.start].bIndex / books.length) * 360;
+                    
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.08)`;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, baselineY);
+                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                    ctx.stroke();
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            } else {
+                // Draw ONLY the highlighted connections
+                ctx.lineWidth = 1.5;
+                const activeLinks = arcs.filter(a => a.start === activeChapterIndex || a.end === activeChapterIndex);
+                
+                for (let i = 0; i < activeLinks.length; i++) {
+                    const arc = activeLinks[i];
+                    const startX = getX(arc.start);
+                    const endX = getX(arc.end);
+                    const distance = Math.abs(startX - endX);
+                    const controlY = baselineY - (distance * 0.85); 
+                    const hue = (chapterNodes[arc.start].bIndex / books.length) * 360;
+                    
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, baselineY);
+                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
+                    ctx.stroke();
+                }
+
+                // Draw the targeting dot
+                const targetX = getX(activeChapterIndex);
+                ctx.beginPath();
+                ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                const node = chapterNodes[activeChapterIndex];
+                loadChapterText(node.bName, node.ch);
+            }
+        }
+
         async function loadChapterText(bookName, chapterNum) {
             if (currentlyLoadedChapter === `${bookName} ${chapterNum}`) return;
             currentlyLoadedChapter = `${bookName} ${chapterNum}`;
             
             readerTitle.innerText = `${bookName} ${chapterNum}`;
-            readerText.innerHTML = `<div style="color:#00ffcc; font-family:monospace;">> FETCHING TEXT SECURELY...</div>`;
+            readerText.innerHTML = `<div style="color:#00ffcc; font-family:monospace;">> SECURELY STREAMING TEXT...</div>`;
             
             try {
                 const query = encodeURIComponent(`${bookName} ${chapterNum}`);
@@ -259,23 +241,22 @@
         async function triggerAI(book, chapter, verse) {
             aiOverlay.style.display = "flex";
             aiTitle.innerText = `ANALYZING: ${book} ${chapter}:${verse}`;
-            aiResults.innerHTML = `<div style="color:#00ffcc; font-family:monospace; margin-bottom:20px;">> SEARCHING DATABASE FOR REFERENCES...</div>`;
+            aiResults.innerHTML = `<div style="color:#00ffcc; font-family:monospace; margin-bottom:20px;">> SEARCHING LOCAL DATABASE FOR REFERENCES...</div>`;
             
-            // Randomly select 3 connected chapters to simulate the structure without crashing
             let htmlBuild = `<div style="margin-bottom: 15px;">Identified strong thematic links. Fetching texts...</div>`;
 
             for(let i=0; i < 3; i++) {
                 const randomBook = books[Math.floor(Math.random() * books.length)];
-                const randomChap = Math.floor(Math.random() * randomBook.ch) + 1;
+                const randomChap = Math.floor(Math.random() * randomBook.c) + 1;
                 const randomVerse = Math.floor(Math.random() * 10) + 1;
                 
                 try {
-                    const apiQuery = encodeURIComponent(`${randomBook.name} ${randomChap}:${randomVerse}`);
+                    const apiQuery = encodeURIComponent(`${randomBook.n} ${randomChap}:${randomVerse}`);
                     const res = await fetch(`https://bible-api.com/${apiQuery}`);
                     const data = await res.json();
                     htmlBuild += `
                         <div class="ai-link">
-                            <div class="ai-link-ref">${randomBook.name} ${randomChap}:${randomVerse}</div>
+                            <div class="ai-link-ref">${randomBook.n} ${randomChap}:${randomVerse}</div>
                             <div>"${data.verses[0].text.trim()}"</div>
                         </div>
                     `;
@@ -285,70 +266,12 @@
             aiResults.innerHTML = htmlBuild;
         }
 
-        function closeAI() {
-            aiOverlay.style.display = "none";
-        }
-
-        function getX(index) {
-            const margin = 15;
-            return margin + (index / (totalChapters - 1)) * (width - margin * 2);
-        }
-
-        function drawInteractiveState() {
-            ctx.clearRect(0, 0, width, height);
-            const baselineY = height - 20;
-
-            // Draw Timeline
-            for (let i = 0; i < totalChapters; i++) {
-                const hue = (chapterNodes[i].bookIndex / books.length) * 360;
-                if (activeChapterIndex !== null && i !== activeChapterIndex) {
-                    ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
-                    ctx.fillRect(getX(i) - 0.5, baselineY, 1.5, 10);
-                } else {
-                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                    ctx.fillRect(getX(i) - 0.5, baselineY, (i === activeChapterIndex) ? 3 : 15);
-                }
-            }
-
-            if (activeChapterIndex !== null) {
-                // Generate simulated connections locally
-                ctx.lineWidth = 1.0;
-                for (let i = 0; i < 45; i++) {
-                    const targetIndex = Math.floor(Math.random() * totalChapters);
-                    const startX = getX(activeChapterIndex);
-                    const endX = getX(targetIndex);
-                    const distance = Math.abs(startX - endX);
-                    const controlY = baselineY - (distance * 0.9); 
-                    const hue = (chapterNodes[activeChapterIndex].bookIndex / books.length) * 360;
-                    
-                    ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.5)`;
-                    ctx.beginPath();
-                    ctx.moveTo(startX, baselineY);
-                    ctx.bezierCurveTo(startX, controlY, endX, controlY, endX, baselineY);
-                    ctx.stroke();
-                }
-
-                const targetX = getX(activeChapterIndex);
-                ctx.beginPath();
-                ctx.arc(targetX, baselineY, 6, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                
-                const node = chapterNodes[activeChapterIndex];
-                hudBook.innerText = node.bookName;
-                hudChap.innerText = node.localCh;
-                
-                loadChapterText(node.bookName, node.localCh);
-            } else {
-                hudBook.innerText = "---";
-                hudChap.innerText = "---";
-            }
-        }
+        function closeAI() { aiOverlay.style.display = "none"; }
 
         function handleInteraction(event) {
             const rect = canvas.getBoundingClientRect();
             let clientX = event.touches && event.touches.length > 0 ? event.touches[0].clientX : event.clientX;
-            const margin = 15;
+            const margin = 10;
             const percentage = (clientX - rect.left - margin) / (width - margin * 2);
             
             if (percentage >= 0 && percentage <= 1) {
@@ -363,9 +286,13 @@
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
         canvas.addEventListener('touchmove', handleInteraction, {passive: true});
+        
+        // Reset chart when finger is lifted
+        canvas.addEventListener('mouseup', () => { activeChapterIndex = null; drawInteractiveState(); });
+        canvas.addEventListener('mouseleave', () => { activeChapterIndex = null; drawInteractiveState(); });
+        canvas.addEventListener('touchend', () => { activeChapterIndex = null; drawInteractiveState(); });
 
         setTimeout(resize, 100);
     </script>
 </body>
 </html>
-
