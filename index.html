@@ -36,13 +36,14 @@
             font-size: 14px; letter-spacing: 4px; color: #aaaaaa; pointer-events: none;
         }
 
+        /* Fixed Telemetry Matrix - Unlocked height and moved up */
         .hud-box {
-            position: absolute; bottom: 40px; left: 10px;
-            background-color: rgba(5, 10, 8, 0.9);
+            position: absolute; bottom: 60px; left: 10px;
+            background-color: rgba(5, 10, 8, 0.95);
             border: 1px solid rgba(0, 255, 204, 0.5);
-            border-radius: 4px; padding: 12px;
+            border-radius: 6px; padding: 15px;
             font-family: monospace; font-size: 11px; color: #aaaaaa;
-            pointer-events: none; max-width: 40%; max-height: 60%;
+            pointer-events: none; z-index: 20;
             display: flex; flex-direction: column;
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
             transition: opacity 0.3s ease;
@@ -54,13 +55,12 @@
         .hud-row { margin-bottom: 4px; }
         .hud-row span { color: #ffffff; font-weight: bold; }
         .hud-targets {
-            margin-top: 8px; overflow-y: hidden;
-            display: flex; flex-direction: column; gap: 4px;
+            margin-top: 10px;
+            display: flex; flex-direction: column; gap: 5px;
         }
         .target-item {
-            background: rgba(255,255,255,0.05); padding: 4px 6px;
+            background: rgba(255,255,255,0.05); padding: 5px 8px;
             border-left: 2px solid #00ffcc; color: #ddd; white-space: nowrap;
-            overflow: hidden; text-overflow: ellipsis;
         }
 
         #ai-overlay {
@@ -257,7 +257,7 @@
                 hudLinks.innerText = `${activeLinks.length} DETECTED`;
                 
                 if (activeLinks.length > 5) {
-                    targetListHTML += `<div style="color:#666; font-size:10px; margin-top:4px;">+ ${activeLinks.length - 5} additional nodes</div>`;
+                    targetListHTML += `<div style="color:#00ffcc; font-size:11px; margin-top:5px; font-weight:bold;">+ ${activeLinks.length - 5} additional nodes</div>`;
                 }
                 hudTargets.innerHTML = targetListHTML;
 
@@ -332,7 +332,6 @@
             const margin = 10;
             let percentage = (clientX - rect.left - margin) / (width - margin * 2);
             
-            // This guarantees the selection stays locked and never glitches off the screen
             if (percentage >= 0 && percentage <= 1) {
                 activeChapterIndex = Math.min(totalChapters - 1, Math.floor(percentage * totalChapters));
             }
@@ -351,7 +350,6 @@
             }
         }
 
-        // We completely removed the commands that cleared the screen when you let go!
         canvas.addEventListener('mousedown', handleInteraction);
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleInteraction(e); });
         canvas.addEventListener('touchstart', handleInteraction, {passive: true});
