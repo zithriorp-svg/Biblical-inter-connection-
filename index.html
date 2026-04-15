@@ -107,13 +107,13 @@
         }
         .overlay-header {
             color: #00ffcc; font-size: 20px; letter-spacing: 2px; margin-bottom: 10px;
-            border-bottom: 1px solid #00ffcc; padding-bottom: 10px;
+            border-bottom: 1px solid #00ffcc; padding-bottom: 10px; flex-shrink: 0;
         }
-        .overlay-content { flex: 1; overflow-y: auto; color: #ffffff; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; padding-bottom: 20px;}
+        .overlay-content { flex: 1; overflow-y: auto; color: #ffffff; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; padding-bottom: 10px;}
         .close-btn {
             background-color: #00ffcc; color: #000; text-align: center; padding: 15px;
             font-weight: bold; border-radius: 4px; margin-top: 10px; text-transform: uppercase; cursor: pointer;
-            position: sticky; bottom: 0;
+            position: sticky; bottom: 0; flex-shrink: 0;
         }
         .close-btn:active { background-color: #00ccaa; }
         
@@ -542,7 +542,7 @@
             
             let html = '';
             verses.forEach((text, i) => {
-                const safeText = text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                const safeText = text.replace(/'/g, "\\'").replace(/"/g, """);
                 html += `<div class="verse-block" id="verse-${i + 1}" onclick="selectVerse('${bookName}', ${chapterNum}, ${i + 1}, this)">`;
                 html += `<span class="verse-num">${i + 1}</span>${safeText}`;
                 html += `</div>`;
@@ -556,30 +556,30 @@
             }, 50);
         }
 
-        // --- UPGRADED METADATA WITH VERIFIED ARTIFACT IMAGES ---
+        // USING A PROXY TO BYPASS WIKIPEDIA HOTLINK BLOCKERS
         function getBookMetadata(book) {
-            // Hotlinking verified open-source Wikimedia Commons images
+            const proxy = "https://wsrv.nl/?url=";
             const specificData = {
-                "Genesis": { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Origins, Covenants, & Promises", location: "Canaan / Ancient Egypt", archaeology: "Enuma Elish parallels, Dead Sea Scrolls", mapQuery: "Jerusalem, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg/400px-The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg" },
-                "Exodus": { writer: "Moses", timeline: "1440-1400 BC", audience: "Israelites in Wilderness", theme: "Deliverance & The Law", location: "Sinai Peninsula / Egypt", archaeology: "Merneptah Stele (Israel mentioned)", mapQuery: "Mount Sinai, Egypt", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Merneptah_Stele.jpg/400px-Merneptah_Stele.jpg" },
-                "Isaiah": { writer: "Isaiah the Prophet", timeline: "740-680 BC", audience: "Kingdom of Judah", theme: "Judgment & The Messianic Hope", location: "Jerusalem, Israel", archaeology: "The Great Isaiah Scroll (Qumran Caves)", mapQuery: "Jerusalem, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg/400px-The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg" },
-                "Matthew": { writer: "Apostle Matthew (Levi)", timeline: "AD 50-70", audience: "Jewish Christians", theme: "Jesus as the Messianic King", location: "Judea / Galilee", archaeology: "Capernaum Synagogue Foundations", mapQuery: "Capernaum, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Pilate_inscription.jpg/400px-Pilate_inscription.jpg" },
-                "John": { writer: "John the Apostle", timeline: "AD 85-95", audience: "Early Global Church", theme: "The Divine Son of God", location: "Ephesus / Patmos", archaeology: "Pool of Bethesda excavated in 1888", mapQuery: "Ephesus, Turkey", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Pool_of_Bethesda_Jerusalem.jpg/400px-Pool_of_Bethesda_Jerusalem.jpg" },
-                "Revelation": { writer: "John the Apostle", timeline: "AD 90-96", audience: "Seven Churches of Asia Minor", theme: "Apocalyptic Victory & Final Judgment", location: "Isle of Patmos, Greece", archaeology: "Ruins of Ephesus, Smyrna, Pergamum", mapQuery: "Patmos, Greece", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Celsus_Library%2C_Ephesus%2C_Turkey.jpg/400px-Celsus_Library%2C_Ephesus%2C_Turkey.jpg" },
-                "Psalms": { writer: "David, Asaph, Solomon", timeline: "1440-400 BC", audience: "Worshipers of Yahweh", theme: "Praise, Lament, & Wisdom", location: "Jerusalem, Judea", archaeology: "Dead Sea Scrolls Psalms Scroll (11QPsa)", mapQuery: "Jerusalem, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Dead_sea_scrolls_-_Psalms.jpg/400px-Dead_sea_scrolls_-_Psalms.jpg" },
-                "Romans": { writer: "Apostle Paul", timeline: "AD 57", audience: "Church in Rome", theme: "Justification by Faith", location: "Corinth / Rome", archaeology: "Erastus Inscription (Corinth)", mapQuery: "Rome, Italy", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Papyrus_46_-_Epistle_to_the_Romans.jpg/400px-Papyrus_46_-_Epistle_to_the_Romans.jpg" }
+                "Genesis": { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Origins, Covenants, & Promises", location: "Canaan / Ancient Egypt", archaeology: "Enuma Elish parallels, Dead Sea Scrolls", mapQuery: "Jerusalem, Israel", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg/400px-The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg" },
+                "Exodus": { writer: "Moses", timeline: "1440-1400 BC", audience: "Israelites in Wilderness", theme: "Deliverance & The Law", location: "Sinai Peninsula / Egypt", archaeology: "Merneptah Stele (Israel mentioned)", mapQuery: "Mount Sinai, Egypt", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/3/35/Merneptah_Stele.jpg/400px-Merneptah_Stele.jpg" },
+                "Isaiah": { writer: "Isaiah the Prophet", timeline: "740-680 BC", audience: "Kingdom of Judah", theme: "Judgment & The Messianic Hope", location: "Jerusalem, Israel", archaeology: "The Great Isaiah Scroll (Qumran Caves)", mapQuery: "Jerusalem, Israel", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg/400px-The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg" },
+                "Matthew": { writer: "Apostle Matthew (Levi)", timeline: "AD 50-70", audience: "Jewish Christians", theme: "Jesus as the Messianic King", location: "Judea / Galilee", archaeology: "Capernaum Synagogue Foundations", mapQuery: "Capernaum, Israel", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Pilate_inscription.jpg/400px-Pilate_inscription.jpg" },
+                "John": { writer: "John the Apostle", timeline: "AD 85-95", audience: "Early Global Church", theme: "The Divine Son of God", location: "Ephesus / Patmos", archaeology: "Pool of Bethesda excavated in 1888", mapQuery: "Ephesus, Turkey", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Pool_of_Bethesda_Jerusalem.jpg/400px-Pool_of_Bethesda_Jerusalem.jpg" },
+                "Revelation": { writer: "John the Apostle", timeline: "AD 90-96", audience: "Seven Churches of Asia Minor", theme: "Apocalyptic Victory & Final Judgment", location: "Isle of Patmos, Greece", archaeology: "Ruins of Ephesus, Smyrna, Pergamum", mapQuery: "Patmos, Greece", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/8/87/Celsus_Library%2C_Ephesus%2C_Turkey.jpg/400px-Celsus_Library%2C_Ephesus%2C_Turkey.jpg" },
+                "Psalms": { writer: "David, Asaph, Solomon", timeline: "1440-400 BC", audience: "Worshipers of Yahweh", theme: "Praise, Lament, & Wisdom", location: "Jerusalem, Judea", archaeology: "Dead Sea Scrolls Psalms Scroll (11QPsa)", mapQuery: "Jerusalem, Israel", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Dead_sea_scrolls_-_Psalms.jpg/400px-Dead_sea_scrolls_-_Psalms.jpg" },
+                "Romans": { writer: "Apostle Paul", timeline: "AD 57", audience: "Church in Rome", theme: "Justification by Faith", location: "Corinth / Rome", archaeology: "Erastus Inscription (Corinth)", mapQuery: "Rome, Italy", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/7/78/Papyrus_46_-_Epistle_to_the_Romans.jpg/400px-Papyrus_46_-_Epistle_to_the_Romans.jpg" }
             };
             
             if (specificData[book]) return specificData[book];
             
             const bookIndex = books.findIndex(b => b.n === book);
-            if (bookIndex < 5) return { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Law & Covenant", location: "Sinai / Canaan", archaeology: "Silver Amulets (Ketef Hinnom)", mapQuery: "Sinai Peninsula, Egypt", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Ketef_Hinnom_Silver_Scroll_1.jpg/400px-Ketef_Hinnom_Silver_Scroll_1.jpg" };
-            if (bookIndex < 17) return { writer: "Various Scribes", timeline: "1400-400 BC", audience: "Nation of Israel", theme: "History of the Kingdom", location: "Ancient Levant", archaeology: "Tel Dan Stele, Moabite Stone", mapQuery: "Jerusalem, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Tel_Dan_stela_-_Israel_Museum%2C_Jerusalem.jpg/400px-Tel_Dan_stela_-_Israel_Museum%2C_Jerusalem.jpg" };
-            if (bookIndex < 22) return { writer: "David, Solomon, et al.", timeline: "1000-400 BC", audience: "Hebrew Worshipers", theme: "Wisdom, Poetry & Praise", location: "Jerusalem", archaeology: "Qumran Caves Texts", mapQuery: "Jerusalem, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Dead_sea_scrolls_-_Psalms.jpg/400px-Dead_sea_scrolls_-_Psalms.jpg" };
-            if (bookIndex < 39) return { writer: "Hebrew Prophets", timeline: "800-400 BC", audience: "Israel, Judah, & Nations", theme: "Repentance & Future Hope", location: "Israel / Babylon", archaeology: "Sennacherib Prism, Lachish Reliefs", mapQuery: "Babylon, Iraq", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Taylor_Prism.jpg/400px-Taylor_Prism.jpg" };
-            if (bookIndex < 43) return { writer: "Evangelists", timeline: "AD 50-90", audience: "Early Christians", theme: "Life & Teachings of Christ", location: "Judea / Galilee", archaeology: "Pilate Stone, Caiaphas Inscription", mapQuery: "Sea of Galilee, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Pilate_inscription.jpg/400px-Pilate_inscription.jpg" };
-            if (bookIndex === 43) return { writer: "Luke the Physician", timeline: "AD 60-62", audience: "Theophilus / Early Church", theme: "Spread of the Gospel", location: "Mediterranean Basin", archaeology: "Roman Roads, Ephesian Theater", mapQuery: "Mediterranean Sea", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Celsus_Library%2C_Ephesus%2C_Turkey.jpg/400px-Celsus_Library%2C_Ephesus%2C_Turkey.jpg" };
-            return { writer: "Paul, Peter, James, John", timeline: "AD 50-95", audience: "Local Churches / Believers", theme: "Christian Doctrine & Living", location: "Roman Empire", archaeology: "Papyrus 46, Early Codexes", mapQuery: "Rome, Italy", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Papyrus_46_-_Epistle_to_the_Romans.jpg/400px-Papyrus_46_-_Epistle_to_the_Romans.jpg" };
+            if (bookIndex < 5) return { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Law & Covenant", location: "Sinai / Canaan", archaeology: "Silver Amulets (Ketef Hinnom)", mapQuery: "Sinai Peninsula, Egypt", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Ketef_Hinnom_Silver_Scroll_1.jpg/400px-Ketef_Hinnom_Silver_Scroll_1.jpg" };
+            if (bookIndex < 17) return { writer: "Various Scribes", timeline: "1400-400 BC", audience: "Nation of Israel", theme: "History of the Kingdom", location: "Ancient Levant", archaeology: "Tel Dan Stele, Moabite Stone", mapQuery: "Jerusalem, Israel", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Tel_Dan_stela_-_Israel_Museum%2C_Jerusalem.jpg/400px-Tel_Dan_stela_-_Israel_Museum%2C_Jerusalem.jpg" };
+            if (bookIndex < 22) return { writer: "David, Solomon, et al.", timeline: "1000-400 BC", audience: "Hebrew Worshipers", theme: "Wisdom, Poetry & Praise", location: "Jerusalem", archaeology: "Qumran Caves Texts", mapQuery: "Jerusalem, Israel", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Dead_sea_scrolls_-_Psalms.jpg/400px-Dead_sea_scrolls_-_Psalms.jpg" };
+            if (bookIndex < 39) return { writer: "Hebrew Prophets", timeline: "800-400 BC", audience: "Israel, Judah, & Nations", theme: "Repentance & Future Hope", location: "Israel / Babylon", archaeology: "Sennacherib Prism, Lachish Reliefs", mapQuery: "Babylon, Iraq", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Taylor_Prism.jpg/400px-Taylor_Prism.jpg" };
+            if (bookIndex < 43) return { writer: "Evangelists", timeline: "AD 50-90", audience: "Early Christians", theme: "Life & Teachings of Christ", location: "Judea / Galilee", archaeology: "Pilate Stone, Caiaphas Inscription", mapQuery: "Sea of Galilee, Israel", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Pilate_inscription.jpg/400px-Pilate_inscription.jpg" };
+            if (bookIndex === 43) return { writer: "Luke the Physician", timeline: "AD 60-62", audience: "Theophilus / Early Church", theme: "Spread of the Gospel", location: "Mediterranean Basin", archaeology: "Roman Roads, Ephesian Theater", mapQuery: "Mediterranean Sea", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/8/87/Celsus_Library%2C_Ephesus%2C_Turkey.jpg/400px-Celsus_Library%2C_Ephesus%2C_Turkey.jpg" };
+            return { writer: "Paul, Peter, James, John", timeline: "AD 50-95", audience: "Local Churches / Believers", theme: "Christian Doctrine & Living", location: "Roman Empire", archaeology: "Papyrus 46, Early Codexes", mapQuery: "Rome, Italy", artifactImg: proxy + "upload.wikimedia.org/wikipedia/commons/thumb/7/78/Papyrus_46_-_Epistle_to_the_Romans.jpg/400px-Papyrus_46_-_Epistle_to_the_Romans.jpg" };
         }
 
         window.runAutoResearch = function(book, chapter, verse) {
@@ -599,7 +599,7 @@
                     > EXTRACTING ARTIFACT IMAGERY...<br><br>
                     > ANALYZING CROSS-REFERENCES...
                 </div>
-                <div id="ar-dashboard" style="display:none; flex-direction:column; gap:15px; padding-bottom: 30px;"></div>
+                <div id="ar-dashboard" style="display:none; flex: 1; flex-direction:column; gap:15px;"></div>
             `;
 
             setTimeout(() => {
@@ -608,7 +608,7 @@
                 const dbInfo = getBookMetadata(book);
                 
                 let dashHTML = `
-                    <div style="border: 1px solid rgba(0, 255, 204, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden;">
+                    <div style="border: 1px solid rgba(0, 255, 204, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden; flex-shrink: 0;">
                         <div style="background: rgba(0, 255, 204, 0.1); padding: 8px 12px; font-weight: bold; border-bottom: 1px solid rgba(0, 255, 204, 0.4); display: flex; justify-content: space-between;">
                             <span>[ HISTORICAL METADATA ]</span>
                             <span>✓ VERIFIED</span>
@@ -621,7 +621,7 @@
                         </div>
                     </div>
 
-                    <div style="border: 1px solid rgba(0, 255, 204, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden;">
+                    <div style="border: 1px solid rgba(0, 255, 204, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden; flex-shrink: 0;">
                         <div style="background: rgba(0, 255, 204, 0.1); padding: 8px 12px; font-weight: bold; border-bottom: 1px solid rgba(0, 255, 204, 0.4);">
                             [ LINK ANALYSIS ENGINE ]
                         </div>
@@ -634,26 +634,26 @@
                         </div>
                     </div>
 
-                    <div style="border: 1px solid rgba(0, 255, 204, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden;">
+                    <div style="border: 1px solid rgba(0, 255, 204, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; flex: 1;">
                         <div style="background: rgba(0, 255, 204, 0.1); padding: 8px 12px; font-weight: bold; border-bottom: 1px solid rgba(0, 255, 204, 0.4);">
                             [ ARCHAEOLOGY & GEOGRAPHY ]
                         </div>
-                        <div style="padding: 12px; font-family: monospace; font-size: 12px;">
+                        <div style="padding: 12px; font-family: monospace; font-size: 12px; display: flex; flex-direction: column; flex: 1;">
                             <div style="margin-bottom: 10px;">
                                 <span style="color: #666;">LOCATION (ORIGIN):</span> <span style="color: #fff;">${dbInfo.location}</span><br>
                                 <span style="color: #666;">KNOWN ARTIFACTS:</span> <span style="color: #fff;">${dbInfo.archaeology}</span>
                             </div>
                             
-                            <div style="position: relative; width: 100%; height: 160px; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-top: 10px; background: #000;">
-                                <img src="${dbInfo.artifactImg}" style="width:100%; height:100%; object-fit: cover; opacity: 0.8;" alt="${dbInfo.archaeology}">
+                            <div style="position: relative; width: 100%; height: 140px; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-top: 10px; background: #000; flex-shrink: 0;">
+                                <img src="${dbInfo.artifactImg}" style="width:100%; height:100%; object-fit: cover; opacity: 0.9;" alt="${dbInfo.archaeology}">
                                 <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); color: #00ffcc; padding: 4px 8px; font-size: 10px; border-radius: 2px; text-transform: uppercase;">
                                     > ARCHIVE IMG: ${dbInfo.archaeology.split(',')[0]}
                                 </div>
                             </div>
                             
-                            <div style="position: relative; width: 100%; height: 200px; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-top: 10px;">
+                            <div style="position: relative; width: 100%; flex: 1; min-height: 250px; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-top: 15px;">
                                 <iframe width="100%" height="100%" frameborder="0" style="border:0; filter: invert(90%) hue-rotate(180deg) contrast(120%);" 
-                                    src="https://maps.google.com/maps?q=${encodeURIComponent(dbInfo.mapQuery)}&t=k&z=6&ie=UTF8&iwloc=&output=embed">
+                                    src="https://maps.google.com/maps?q=${encodeURIComponent(dbInfo.mapQuery)}&t=k&z=6&output=embed">
                                 </iframe>
                                 <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: #00ffcc; padding: 2px 6px; font-size: 10px; border-radius: 2px;">LIVE SATELLITE FEED</div>
                             </div>
@@ -731,3 +731,4 @@
     </script>
 </body>
 </html>
+
