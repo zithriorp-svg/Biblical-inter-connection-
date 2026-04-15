@@ -556,29 +556,29 @@
             }, 50);
         }
 
-        // --- NEW DEEP AUTORESEARCH PROTOCOL ---
+        // --- UPGRADED METADATA WITH PRECISION MAP QUERIES ---
         function getBookMetadata(book) {
             const specificData = {
-                "Genesis": { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Origins, Covenants, & Promises", location: "Canaan / Ancient Egypt", archaeology: "Enuma Elish parallels, Dead Sea Scrolls" },
-                "Exodus": { writer: "Moses", timeline: "1440-1400 BC", audience: "Israelites in Wilderness", theme: "Deliverance & The Law", location: "Sinai Peninsula / Egypt", archaeology: "Merneptah Stele (Israel mentioned)" },
-                "Isaiah": { writer: "Isaiah the Prophet", timeline: "740-680 BC", audience: "Kingdom of Judah", theme: "Judgment & The Messianic Hope", location: "Jerusalem, Israel", archaeology: "The Great Isaiah Scroll (Qumran Caves)" },
-                "Matthew": { writer: "Apostle Matthew (Levi)", timeline: "AD 50-70", audience: "Jewish Christians", theme: "Jesus as the Messianic King", location: "Judea / Galilee", archaeology: "Capernaum Synagogue Foundations" },
-                "John": { writer: "John the Apostle", timeline: "AD 85-95", audience: "Early Global Church", theme: "The Divine Son of God", location: "Ephesus / Patmos", archaeology: "Pool of Bethesda excavated in 1888" },
-                "Revelation": { writer: "John the Apostle", timeline: "AD 90-96", audience: "Seven Churches of Asia Minor", theme: "Apocalyptic Victory & Final Judgment", location: "Isle of Patmos, Greece", archaeology: "Ruins of Ephesus, Smyrna, Pergamum" },
-                "Psalms": { writer: "David, Asaph, Solomon", timeline: "1440-400 BC", audience: "Worshipers of Yahweh", theme: "Praise, Lament, & Wisdom", location: "Jerusalem, Judea", archaeology: "Dead Sea Scrolls Psalms Scroll (11QPsa)" },
-                "Romans": { writer: "Apostle Paul", timeline: "AD 57", audience: "Church in Rome", theme: "Justification by Faith", location: "Corinth / Rome", archaeology: "Erastus Inscription (Corinth)" }
+                "Genesis": { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Origins, Covenants, & Promises", location: "Canaan / Ancient Egypt", archaeology: "Enuma Elish parallels, Dead Sea Scrolls", mapQuery: "Jerusalem, Israel" },
+                "Exodus": { writer: "Moses", timeline: "1440-1400 BC", audience: "Israelites in Wilderness", theme: "Deliverance & The Law", location: "Sinai Peninsula / Egypt", archaeology: "Merneptah Stele (Israel mentioned)", mapQuery: "Mount Sinai, Egypt" },
+                "Isaiah": { writer: "Isaiah the Prophet", timeline: "740-680 BC", audience: "Kingdom of Judah", theme: "Judgment & The Messianic Hope", location: "Jerusalem, Israel", archaeology: "The Great Isaiah Scroll (Qumran Caves)", mapQuery: "Jerusalem, Israel" },
+                "Matthew": { writer: "Apostle Matthew (Levi)", timeline: "AD 50-70", audience: "Jewish Christians", theme: "Jesus as the Messianic King", location: "Judea / Galilee", archaeology: "Capernaum Synagogue Foundations", mapQuery: "Capernaum, Israel" },
+                "John": { writer: "John the Apostle", timeline: "AD 85-95", audience: "Early Global Church", theme: "The Divine Son of God", location: "Ephesus / Patmos", archaeology: "Pool of Bethesda excavated in 1888", mapQuery: "Ephesus, Turkey" },
+                "Revelation": { writer: "John the Apostle", timeline: "AD 90-96", audience: "Seven Churches of Asia Minor", theme: "Apocalyptic Victory & Final Judgment", location: "Isle of Patmos, Greece", archaeology: "Ruins of Ephesus, Smyrna, Pergamum", mapQuery: "Patmos, Greece" },
+                "Psalms": { writer: "David, Asaph, Solomon", timeline: "1440-400 BC", audience: "Worshipers of Yahweh", theme: "Praise, Lament, & Wisdom", location: "Jerusalem, Judea", archaeology: "Dead Sea Scrolls Psalms Scroll (11QPsa)", mapQuery: "Jerusalem, Israel" },
+                "Romans": { writer: "Apostle Paul", timeline: "AD 57", audience: "Church in Rome", theme: "Justification by Faith", location: "Corinth / Rome", archaeology: "Erastus Inscription (Corinth)", mapQuery: "Rome, Italy" }
             };
             
             if (specificData[book]) return specificData[book];
             
             const bookIndex = books.findIndex(b => b.n === book);
-            if (bookIndex < 5) return { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Law & Covenant", location: "Sinai / Canaan", archaeology: "Silver Amulets (Ketef Hinnom)" };
-            if (bookIndex < 17) return { writer: "Various Scribes", timeline: "1400-400 BC", audience: "Nation of Israel", theme: "History of the Kingdom", location: "Ancient Levant", archaeology: "Tel Dan Stele, Moabite Stone" };
-            if (bookIndex < 22) return { writer: "David, Solomon, et al.", timeline: "1000-400 BC", audience: "Hebrew Worshipers", theme: "Wisdom, Poetry & Praise", location: "Jerusalem", archaeology: "Qumran Caves Texts" };
-            if (bookIndex < 39) return { writer: "Hebrew Prophets", timeline: "800-400 BC", audience: "Israel, Judah, & Nations", theme: "Repentance & Future Hope", location: "Israel / Babylon", archaeology: "Sennacherib Prism, Lachish Reliefs" };
-            if (bookIndex < 43) return { writer: "Evangelists", timeline: "AD 50-90", audience: "Early Christians", theme: "Life & Teachings of Christ", location: "Judea / Galilee", archaeology: "Pilate Stone, Caiaphas Inscription" };
-            if (bookIndex === 43) return { writer: "Luke the Physician", timeline: "AD 60-62", audience: "Theophilus / Early Church", theme: "Spread of the Gospel", location: "Mediterranean Basin", archaeology: "Roman Roads, Ephesian Theater" };
-            return { writer: "Paul, Peter, James, John", timeline: "AD 50-95", audience: "Local Churches / Believers", theme: "Christian Doctrine & Living", location: "Roman Empire", archaeology: "Papyrus 46, Early Codexes" };
+            if (bookIndex < 5) return { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Law & Covenant", location: "Sinai / Canaan", archaeology: "Silver Amulets (Ketef Hinnom)", mapQuery: "Sinai Peninsula, Egypt" };
+            if (bookIndex < 17) return { writer: "Various Scribes", timeline: "1400-400 BC", audience: "Nation of Israel", theme: "History of the Kingdom", location: "Ancient Levant", archaeology: "Tel Dan Stele, Moabite Stone", mapQuery: "Jerusalem, Israel" };
+            if (bookIndex < 22) return { writer: "David, Solomon, et al.", timeline: "1000-400 BC", audience: "Hebrew Worshipers", theme: "Wisdom, Poetry & Praise", location: "Jerusalem", archaeology: "Qumran Caves Texts", mapQuery: "Jerusalem, Israel" };
+            if (bookIndex < 39) return { writer: "Hebrew Prophets", timeline: "800-400 BC", audience: "Israel, Judah, & Nations", theme: "Repentance & Future Hope", location: "Israel / Babylon", archaeology: "Sennacherib Prism, Lachish Reliefs", mapQuery: "Babylon, Iraq" };
+            if (bookIndex < 43) return { writer: "Evangelists", timeline: "AD 50-90", audience: "Early Christians", theme: "Life & Teachings of Christ", location: "Judea / Galilee", archaeology: "Pilate Stone, Caiaphas Inscription", mapQuery: "Sea of Galilee, Israel" };
+            if (bookIndex === 43) return { writer: "Luke the Physician", timeline: "AD 60-62", audience: "Theophilus / Early Church", theme: "Spread of the Gospel", location: "Mediterranean Basin", archaeology: "Roman Roads, Ephesian Theater", mapQuery: "Mediterranean Sea" };
+            return { writer: "Paul, Peter, James, John", timeline: "AD 50-95", audience: "Local Churches / Believers", theme: "Christian Doctrine & Living", location: "Roman Empire", archaeology: "Papyrus 46, Early Codexes", mapQuery: "Rome, Italy" };
         }
 
         window.runAutoResearch = function(book, chapter, verse) {
@@ -590,7 +590,6 @@
             overlay.style.display = "flex";
             title.innerText = `AUTORESEARCH: ${book} ${chapter}:${verse}`;
             
-            // Terminal Boot Sequence
             content.innerHTML = `
                 <div style="color:#00ffcc; font-family:monospace; margin-bottom:20px; text-align:center; padding: 40px 0;" id="ar-terminal">
                     > INITIALIZING AUTORESEARCH AGENT...<br><br>
@@ -606,7 +605,6 @@
                 
                 const dbInfo = getBookMetadata(book);
                 
-                // Build the Deep Research Dashboard
                 let dashHTML = `
                     <div style="border: 1px solid rgba(0, 255, 204, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden;">
                         <div style="background: rgba(0, 255, 204, 0.1); padding: 8px 12px; font-weight: bold; border-bottom: 1px solid rgba(0, 255, 204, 0.4); display: flex; justify-content: space-between;">
@@ -645,7 +643,7 @@
                             </div>
                             <div style="position: relative; width: 100%; height: 200px; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin-top: 10px;">
                                 <iframe width="100%" height="100%" frameborder="0" style="border:0; filter: invert(90%) hue-rotate(180deg) contrast(120%);" 
-                                    src="https://maps.google.com/maps?q=${encodeURIComponent(dbInfo.location)}&t=k&z=5&ie=UTF8&iwloc=&output=embed">
+                                    src="https://maps.google.com/maps?q=${encodeURIComponent(dbInfo.mapQuery)}&t=k&z=6&ie=UTF8&iwloc=&output=embed">
                                 </iframe>
                                 <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: #00ffcc; padding: 2px 6px; font-size: 10px; border-radius: 2px;">LIVE SATELLITE FEED</div>
                             </div>
@@ -656,7 +654,6 @@
                 document.getElementById('ar-dashboard').innerHTML = dashHTML;
                 document.getElementById('ar-dashboard').style.display = 'flex';
                 
-                // Populate the specific links for this verse
                 let linksHTML = "";
                 verseLinks.forEach(arc => {
                     const targetNode = chapterNodes[arc.end];
