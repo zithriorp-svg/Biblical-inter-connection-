@@ -525,6 +525,7 @@
             }
         }
 
+        // FIXED THE CRITICAL SYNTAX ERROR ON QUOTATION MARKS HERE
         function loadChapterText(bookName, chapterNum, targetVerse = 1) {
             if (!bibleDB) return;
             
@@ -542,7 +543,7 @@
             
             let html = '';
             verses.forEach((text, i) => {
-                const safeText = text.replace(/'/g, "\\'").replace(/"/g, """);
+                const safeText = text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
                 html += `<div class="verse-block" id="verse-${i + 1}" onclick="selectVerse('${bookName}', ${chapterNum}, ${i + 1}, this)">`;
                 html += `<span class="verse-num">${i + 1}</span>${safeText}`;
                 html += `</div>`;
@@ -556,7 +557,6 @@
             }, 50);
         }
 
-        // USING A PROXY TO BYPASS WIKIPEDIA HOTLINK BLOCKERS
         function getBookMetadata(book) {
             const proxy = "https://wsrv.nl/?url=";
             const specificData = {
