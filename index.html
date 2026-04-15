@@ -525,6 +525,7 @@
             }
         }
 
+        // FIXED TEXT PARSING BUG TO PREVENT BOOT CRASH
         function loadChapterText(bookName, chapterNum, targetVerse = 1) {
             if (!bibleDB) return;
             
@@ -542,7 +543,7 @@
             
             let html = '';
             verses.forEach((text, i) => {
-                const safeText = text.replace(/'/g, "\\'").replace(/"/g, """);
+                const safeText = text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
                 html += `<div class="verse-block" id="verse-${i + 1}" onclick="selectVerse('${bookName}', ${chapterNum}, ${i + 1}, this)">`;
                 html += `<span class="verse-num">${i + 1}</span>${safeText}`;
                 html += `</div>`;
@@ -556,7 +557,6 @@
             }, 50);
         }
 
-        // BYPASSING ALL PROXIES - DIRECT SECURE HOTLINKING
         function getBookMetadata(book) {
             const specificData = {
                 "Genesis": { writer: "Moses (Trad.)", timeline: "1440-1400 BC", audience: "Ancient Israelites", theme: "Origins, Covenants, & Promises", location: "Canaan / Ancient Egypt", archaeology: "Enuma Elish parallels, Dead Sea Scrolls", mapQuery: "Jerusalem, Israel", artifactImg: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg/400px-The_Great_Isaiah_Scroll_MS_A_%281QIsa%29.jpg" },
@@ -606,7 +606,6 @@
                 
                 const dbInfo = getBookMetadata(book);
                 
-                // DEPLOYING DEEP COLOR SEGREGATION UI
                 let dashHTML = `
                     <div style="border: 1px solid rgba(255, 170, 0, 0.4); background: rgba(0, 10, 5, 0.8); border-radius: 6px; overflow: hidden; flex-shrink: 0;">
                         <div style="background: rgba(255, 170, 0, 0.1); padding: 8px 12px; font-weight: bold; border-bottom: 1px solid rgba(255, 170, 0, 0.4); display: flex; justify-content: space-between; color: #ffaa00;">
@@ -731,3 +730,4 @@
     </script>
 </body>
 </html>
+
