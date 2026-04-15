@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offline-engine-v9';
+const CACHE_NAME = 'offline-engine-v10';
 
 self.addEventListener('install', e => {
     self.skipWaiting();
